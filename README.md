@@ -3,7 +3,7 @@
 Una plataforma para que los estudiantes de la UTN consigan su primera experiencia laboral real.
 
 **Proyecto Final — Tecnicatura Universitaria en Programación (UTN)**
-Estado: en desarrollo 🚧
+Estado: en desarrollo 
 
 ## De qué se trata
 
@@ -105,22 +105,32 @@ al lado del resto del código nos ahorra un montón de complejidad innecesaria.
 
 ```
 PROYECTO-FINAL-UTN/
-├── backend/      # API y motor de recomendación
-├── frontend/     # La aplicación web
+├── backend/          # API NestJS y motor de recomendación
+│   └── src/
+├── frontend/         # Aplicación web en Next.js (App Router)
+│   └── src/app/
 └── README.md
 ```
 
 ## Cómo levantarlo
 
-Todavía no hay código. Esta sección se completa cuando cerremos el setup inicial.
+Necesitás Node.js 20 o superior. Cada aplicación se instala y se corre por separado,
+en dos terminales distintas.
 
 ```bash
-# Backend
-cd backend && npm install && npm run start:dev
+# Terminal 1 — la API
+cd backend
+npm install
+npm run start:dev     # queda escuchando en http://localhost:3001
 
-# Frontend
-cd frontend && npm install && npm run dev
+# Terminal 2 — la web
+cd frontend
+npm install
+npm run dev           # queda escuchando en http://localhost:3000
 ```
+
+La API usa el puerto 3001 y la web el 3000, para que puedan convivir sin pisarse.
+El backend ya viene con CORS habilitado hacia el frontend.
 
 ## Una honestidad sobre los datos
 
@@ -142,5 +152,6 @@ de portales de empleo, para que la demo no se sienta de juguete.
 
 ## Quiénes lo hacemos
 
-- Leonel Gonzalez
-- *(completar)*
+- Leonel Gonzalez. 
+- Marco Krivocapich.
+- Octavio Guardamagna. 
