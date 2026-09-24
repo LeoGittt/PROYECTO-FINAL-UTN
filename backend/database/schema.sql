@@ -590,8 +590,13 @@ CREATE INDEX ix_notificacion_pendiente_email ON notificacion (fecha) WHERE NOT e
 -- =============================================================================
 -- 10. VISTAS DEL DASHBOARD DE MÉTRICAS (Módulo 5, RF-07 y RF-11)
 -- =============================================================================
+-- Estas vistas son la única lectura directa entre módulos (ver ARQUITECTURA.md 5.3).
+-- El comentario "Contrato" de cada vista lista las columnas de otros módulos que lee:
+-- si un cambio renombra o elimina una de ellas, tiene que actualizar la vista.
 
 -- Tecnologías más pedidas y su evolución mensual.
+-- Contrato: M2 proyecto(id_proyecto, fecha_publicacion), proyecto_tecnologia(id_proyecto, id_tecnologia, obligatoria);
+--           M5 tecnologia(id_tecnologia, nombre, categoria).
 CREATE VIEW vw_tecnologias_demandadas AS
 SELECT
     date_trunc('month', p.fecha_publicacion)::date AS mes,
@@ -609,6 +614,10 @@ GROUP BY 1, 2, 3, 4;
 -- Porcentaje de estudiantes con match, por carrera y año.
 --   con_recomendacion: tiene al menos un match >= umbral en la configuración activa.
 --   con_proyecto:      tiene al menos una postulación aceptada.
+-- Contrato: M1 perfil_estudiante(id_estudiante, id_usuario, id_carrera, anio_cursada), usuario(id_usuario, activo);
+--           M3 match(id_estudiante, id_configuracion, puntaje_total), configuracion_motor(id_configuracion, activa, umbral_recomendacion),
+--              postulacion(id_estudiante, estado);
+--           M5 carrera(id_carrera, nombre).
 CREATE VIEW vw_match_por_carrera_anio AS
 WITH base AS (
     SELECT
@@ -641,6 +650,9 @@ FROM base
 GROUP BY carrera, anio_cursada;
 
 -- Tiempo desde el registro hasta el primer proyecto (primera postulación aceptada).
+-- Contrato: M1 perfil_estudiante(id_estudiante, id_usuario, id_carrera, anio_cursada), usuario(id_usuario, fecha_registro);
+--           M3 postulacion(id_postulacion, id_estudiante), postulacion_historial(id_postulacion, estado_nuevo, fecha_cambio);
+--           M5 carrera(id_carrera, nombre).
 CREATE VIEW vw_tiempo_primer_proyecto AS
 SELECT
     e.id_estudiante,
@@ -657,7 +669,8 @@ JOIN postulacion p           ON p.id_estudiante  = e.id_estudiante
 JOIN postulacion_historial h ON h.id_postulacion = p.id_postulacion AND h.estado_nuevo = 'aceptada'
 GROUP BY e.id_estudiante, c.nombre, e.anio_cursada, u.fecha_registro;
 
--- Embudo postulación -> entrevista -> proyecto cerrado, por mes de postulación.
+-- Embudo postulación, entrevista y proyecto cerrado, por mes de postulación.
+-- Contrato: M3 postulacion(id_postulacion, fecha_postulacion), postulacion_historial(id_postulacion, estado_nuevo).
 CREATE VIEW vw_embudo_postulaciones AS
 WITH etapas AS (
     SELECT
