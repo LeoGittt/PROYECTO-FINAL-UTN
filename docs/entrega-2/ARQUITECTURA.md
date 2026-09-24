@@ -25,7 +25,7 @@ En lugar de que el dominio llame a la base, el dominio define la interfaz que ne
 
 La imagen se generó con [diagramas/paquetes.puml](./diagramas/paquetes.puml) (PlantUML). El mismo diagrama está en [diagramas/paquetes.uxf](./diagramas/paquetes.uxf), que se abre en UMLetino con File > Open.
 
-Cada flecha `<<use>>` va desde el paquete que usa hacia el paquete usado. Entre capas, todas las flechas apuntan al dominio. Dentro de la capa de aplicación no hay ciclos: los catálogos de M5 y M1 son la base, y ningún módulo depende de M4 ni de la administración de M5. Los eventos no se dibujan como dependencias entre módulos, porque quien los emite no conoce a quien los escucha. La interfaz `PublicadorEventos` está en el paquete de eventos de dominio y la implementa el bus de eventos de Infraestructura.
+Cada flecha `<<use>>` va desde el paquete que usa hacia el paquete usado. Entre capas, las dependencias bajan de Presentación a Aplicación y de Aplicación a Dominio, e Infraestructura también apunta a Dominio porque implementa sus interfaces; el dominio no depende de ninguna otra capa. Dentro de la capa de aplicación no hay ciclos: los catálogos de M5 y M1 son la base, y ningún módulo depende de M4 ni de la administración de M5. Los eventos no se dibujan como dependencias entre módulos, porque quien los emite no conoce a quien los escucha. La interfaz `PublicadorEventos` está en el paquete de eventos de dominio y la implementa el bus de eventos de Infraestructura.
 
 ## 4. Módulos
 
@@ -65,7 +65,7 @@ interface ProyectosApi {
 
 Emite `proyecto.publicado`, `proyecto.actualizado` y `proyecto.estado_cambiado`. Encapsula las transiciones de estado del proyecto y la regla de publicador único.
 
-### 4.3 M3: Búsqueda y Recomendación
+### 4.3 M3: Búsqueda y Recomendación (Matching)
 
 Responsabilidad: la vinculación entre estudiantes y proyectos (compatibilidad, postulaciones y evaluación del motor).
 
@@ -82,11 +82,11 @@ interface PostulacionesApi {
 }
 ```
 
-Emite `match.nuevo`, `invitacion.enviada` y `postulacion.estado_cambiado`, y escucha los eventos de M1 y M2 para recalcular. Encapsula la fórmula del puntaje, los algoritmos de similitud, la máquina de estados de la postulación y el cálculo de las métricas de evaluación.
+Emite `match.nuevo`, `invitacion.enviada`, `postulacion.creada` y `postulacion.estado_cambiado`, y escucha los eventos de M1 y M2 para recalcular. Cuando un estudiante acepta una invitación, M3 crea la postulación en estado pendiente en la misma operación. Encapsula la fórmula del puntaje, los algoritmos de similitud, la máquina de estados de la postulación y el cálculo de las métricas de evaluación.
 
 ### 4.4 M4: Comunicación y Seguimiento
 
-Responsabilidad: avisar lo que pasó y permitir seguir las postulaciones. No exporta servicios: escucha los eventos de M2 y M3 y usa las API de M1 y M3. Encapsula las plantillas de email y el proveedor de correo.
+Responsabilidad: avisar lo que pasó y permitir seguir las postulaciones. No exporta servicios: escucha los eventos de M2 y M3 y usa las API de M1 y M3. Encapsula las plantillas y el proveedor de email.
 
 ### 4.5 M5: Administración y Reportes
 
@@ -116,7 +116,7 @@ Todo lo relacionado con el puntaje (algoritmos, pesos, resultados y evaluación)
 
 El material de la Unidad 3 dice que "un buen diseño acepta dependencias necesarias, pero las hace claras, pequeñas y estables". En UTN Match hay una excepción de ese tipo: las cuatro vistas del dashboard, que M5 lee directamente aunque combinan tablas de M1, M2 y M3.
 
-Es necesaria, porque calcular las métricas a través de las API obligaría a traer todas las filas a memoria (RNF-02). Es clara, porque es la única lectura entre módulos y la tabla de abajo dice qué columnas usa. Es pequeña, porque son cuatro vistas de solo lectura que usa solo el submódulo `reportes`. Y es estable, porque lee claves, estados y fechas; si el volumen crece, pueden pasar a vistas materializadas sin cambiar sus columnas.
+Es necesaria, porque estas métricas cruzan datos de varios módulos fila por fila; por ejemplo, las postulaciones aceptadas agrupadas por la carrera y el año de cada estudiante. Los conteos simples de un solo módulo, como los de RF-07, sí se piden por API, pero un cruce así obligaría a traer todas las filas de cada módulo a memoria para combinarlas (RNF-02). Es clara, porque es la única lectura entre módulos y la tabla de abajo dice qué columnas usa. Es pequeña, porque son cuatro vistas de solo lectura que usa solo el submódulo `reportes`. Y es estable, porque lee claves, estados y fechas; si el volumen crece, pueden pasar a vistas materializadas sin cambiar sus columnas.
 
 | Vista | Columnas que lee de otros módulos |
 |-------|-----------------------------------|
@@ -151,7 +151,7 @@ backend/src/
 | `AdminModule` | M5 | `PerfilesModule`, `ProyectosModule` | |
 | `ReportesModule` | M5 | `DatabaseModule`, `PerfilesModule`, `ProyectosModule`, `MatchingModule` | |
 
-En NestJS, un proveedor que no está en `exports` no se puede inyectar desde otro módulo. Como los repositorios de M1 no se exportan, el propio framework impide que M3 lea sus tablas. El siguiente ejemplo muestra a M3 recalculando los matches cuando se publica un proyecto. El servicio usa solo las API de M1 y M2 y las interfaces del dominio, incluida `PublicadorEventos`; la librería de eventos aparece únicamente en el listener, que es parte de la infraestructura.
+En NestJS, un proveedor que no está en `exports` no se puede inyectar desde otro módulo, así que M3 no puede usar los repositorios de M1. Esto no impide que un módulo escriba una consulta SQL sobre tablas ajenas a través de la conexión compartida: esa parte de la regla se controla en la revisión de código. El siguiente ejemplo muestra a M3 recalculando los matches cuando se publica un proyecto. El servicio usa solo las API de M1 y M2 y las interfaces del dominio, incluida `PublicadorEventos`; la librería de eventos aparece únicamente en el listener, que es parte de la infraestructura.
 
 ```ts
 // Aplicación (matching): caso de uso

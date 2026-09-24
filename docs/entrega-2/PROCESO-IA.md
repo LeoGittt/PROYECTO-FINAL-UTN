@@ -4,7 +4,7 @@ Trabajo Final Integrador, Tecnicatura Universitaria en Programación (UTN). Entr
 
 ## 1. Forma de trabajo
 
-Usamos un asistente de IA (Claude Code, de Anthropic) sobre el repositorio. La IA exploró el proyecto, propuso alternativas, generó el SQL y la documentación y ejecutó las verificaciones. Las decisiones las tomamos nosotros. Trabajamos en cinco iteraciones, siguiendo en cada una el mismo ciclo: requerimiento, generación, análisis crítico y refinamiento.
+Usamos un asistente de IA (Claude Code, de Anthropic) sobre el repositorio. La IA exploró el proyecto, propuso alternativas, generó el SQL y la documentación y ejecutó las verificaciones. Las decisiones las tomamos nosotros. Trabajamos en seis iteraciones, siguiendo en cada una el mismo ciclo: requerimiento, generación, análisis crítico y refinamiento.
 
 ```mermaid
 flowchart LR
@@ -44,6 +44,16 @@ Antes de subir la entrega, le pedimos a la IA una auditoría del repositorio con
 
 Decidimos eliminar `postulacion.id_invitacion`, porque la invitación se obtiene por el par estudiante-proyecto, y quitar las columnas sin uso con el mismo criterio de la iteración anterior. Además restauramos el DER conceptual, aclaramos la notación, agregamos una tabla corta de requisitos y definimos la interfaz `PublicadorEventos` en el dominio, implementada en Infraestructura. Dejamos sin tocar el código de ejemplo de Next.js y de NestJS, que se reemplaza en el desarrollo. Después se repitieron todas las pruebas y la verificación de coherencia entre el esquema y los documentos.
 
-## 7. Conclusiones
+## 7. Iteración 6: revisión como tutor
 
-Pedir un plan antes que un resultado nos permitió detectar la incoherencia con la Entrega 1 antes de escribir código. La IA fue útil para encontrar inconsistencias, pero dos veces afirmó datos sin verificarlos, así que todo lo que se puede comprobar hay que comprobarlo. Quedaron de nuestro lado las decisiones de alcance, la interpretación del material de la cátedra y las validaciones que la IA no puede hacer: probar el esquema en Supabase y contrastar las materias del seed con el plan vigente.
+Después de subir una primera versión, le pedimos a la IA que revisara todo como lo haría un tutor exigente: que recorriera los flujos principales sobre la base, probara reglas de negocio sospechosas y controlara el seed, la coherencia con la Entrega 1 y el README.
+
+El hallazgo más importante fue de honestidad: la documentación decía que el conjunto de referencia estaba "marcado a mano por el equipo", pero los pares los había propuesto la IA. Lo corregimos para que diga cómo se armó y que lo vamos a revisar y ampliar durante la implementación. Además, los no relevantes eran casos obvios y la evaluación daba 100 % de precisión, así que agregamos casos límite; con la fórmula de v1, la precisión baja a 0,93.
+
+La revisión mostró también que la base aceptaba reglas que nadie había definido. Decidimos que, al aceptar una invitación, el backend crea la postulación en estado pendiente, y documentamos qué reglas controla el backend. Adoptamos una política de baja lógica (los usuarios se desactivan y los proyectos se cancelan) y pasamos a `RESTRICT` las claves foráneas del historial, del conjunto de referencia y de la configuración del motor, porque borrar un estudiante o un proyecto eliminaba en cascada los datos de las métricas.
+
+Corregimos además un error de la iteración 5. Habíamos quitado `carrera.duracion_anios` porque ninguna consulta la usaba, pero es el dato que permite validar que un estudiante de una carrera de dos años no figure en quinto año. La restauramos: una columna puede no aparecer en ninguna consulta y aun así ser necesaria para validar. También documentamos tres cambios de alcance respecto de la Entrega 1 que no estaban explicados, corregimos incoherencias del seed (cupos, horas y fechas) y ajustamos la redacción. La verificación de los nombres de las materias del seed la hacemos nosotros contra el plan vigente.
+
+## 8. Conclusiones
+
+Pedir un plan antes que un resultado nos permitió detectar la incoherencia con la Entrega 1 antes de escribir código. La IA fue útil para encontrar inconsistencias, pero varias veces afirmó datos sin verificarlos (la aprobación del tutor, un conteo del seed y quién había marcado el conjunto de referencia), así que todo lo que se puede comprobar hay que comprobarlo. Quedaron de nuestro lado las decisiones de alcance, la interpretación del material de la cátedra y las validaciones que la IA no puede hacer: probar el esquema en Supabase y contrastar las materias del seed con el plan vigente.

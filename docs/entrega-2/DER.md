@@ -4,9 +4,11 @@ Trabajo Final Integrador, Tecnicatura Universitaria en Programación (UTN). Entr
 
 ## 1. Introducción
 
-La base de datos es relacional: PostgreSQL 15 o superior, alojada en Supabase. El esquema está en `backend/database/schema.sql` y tiene 23 tablas, 9 tipos enumerados, 5 triggers y 4 vistas para el dashboard. Los datos de ejemplo están en `backend/database/seed.sql` e incluyen 29 usuarios, 14 proyectos, 24 postulaciones y 40 matches de referencia. No se cargan filas en `match` ni en `evaluacion_motor`, porque esos datos los genera el motor.
+UTN Match conecta a estudiantes de la UTN con proyectos acotados que publican empresas y docentes de cátedras. Un motor calcula qué tan compatible es cada estudiante con cada proyecto (el match) y ordena las recomendaciones; el estudiante se postula o el publicador lo invita, y un dashboard mide los resultados. La descripción completa está en el [README](../../README.md).
 
-Las tablas usan los nombres de las entidades de la Entrega 1, en singular y en snake_case. Cada tabla pertenece a un único módulo, que es el único que la lee y la escribe (ver [ARQUITECTURA.md](./ARQUITECTURA.md)):
+La base de datos es relacional: PostgreSQL 15 o superior, alojada en Supabase. El esquema está en `backend/database/schema.sql` y tiene 23 tablas, 9 tipos enumerados, 5 triggers y 4 vistas para el dashboard. Los datos de ejemplo están en `backend/database/seed.sql` e incluyen 29 usuarios, 14 proyectos, 24 postulaciones y un conjunto de referencia de 48 pares para evaluar el motor. No se cargan filas en `match` ni en `evaluacion_motor`, porque esos datos los genera el motor.
+
+Las tablas usan los nombres de las entidades de la Entrega 1, en singular y en snake_case. Cada tabla pertenece a un único módulo, que es el único que la escribe. Los demás módulos acceden a sus datos a través de la API del dueño; la única lectura directa entre módulos son las vistas del dashboard (ver [ARQUITECTURA.md](./ARQUITECTURA.md)):
 
 | Área | Tablas | Módulo dueño |
 |------|--------|--------------|
@@ -78,6 +80,7 @@ erDiagram
     carrera {
         bigint id_carrera PK
         varchar nombre UK
+        smallint duracion_anios "1 a 6"
     }
     perfil_estudiante {
         bigint id_estudiante PK
@@ -360,11 +363,11 @@ erDiagram
 | `estudiante_tecnologia` | Tecnologías del estudiante y su nivel. | Clave compuesta. |
 | `estudiante_habilidad` | Habilidades blandas del estudiante. | Clave compuesta. |
 | `materia_aprobada` | Materias aprobadas por el estudiante (RF-09). | Clave compuesta. |
-| `carrera` | Carreras de la UTN, para agrupar métricas. | Nombre único. |
+| `carrera` | Carreras de la UTN y su duración, para agrupar métricas y validar el año del estudiante. | Nombre único. Duración de 1 a 6 años. |
 | `materia` | Materias del plan de cada carrera. | Nombre único dentro de la carrera. |
 | `tecnologia` | Catálogo de tecnologías, con categoría. | Nombre único sin distinguir mayúsculas. |
 | `habilidad` | Catálogo de habilidades blandas. | Nombre único sin distinguir mayúsculas. |
-| `proyecto` | Proyecto publicado por una empresa o un docente (RF-03). | Exactamente un publicador. Fecha de publicación obligatoria fuera del borrador. |
+| `proyecto` | Proyecto publicado por una empresa o un docente (RF-03). | Exactamente un publicador. Fecha de publicación obligatoria fuera del borrador. Fecha de cierre solo si está finalizado o cancelado. |
 | `proyecto_tecnologia` | Tecnologías que pide el proyecto, obligatorias o deseables. | Clave compuesta. |
 | `proyecto_habilidad` | Habilidades que pide el proyecto. | Clave compuesta. |
 | `postulacion` | Postulación de un estudiante a un proyecto (RF-05). | Una por estudiante y proyecto. |
@@ -372,10 +375,10 @@ erDiagram
 | `invitacion` | Invitación a un estudiante para un proyecto (RF-05). | Una por proyecto y estudiante. |
 | `match` | Puntaje de compatibilidad de un par estudiante-proyecto y sus tres componentes (RF-04). | Una fila por par y configuración. Puntajes entre 0 y 1. |
 | `configuracion_motor` | Pesos de cada componente y umbral de recomendación (RF-10). | Los pesos suman 1. Una sola configuración activa. |
-| `match_referencia` | Pares marcados a mano como buen o mal match (RF-10). | Cada par se etiqueta una vez. |
+| `match_referencia` | Conjunto de referencia: pares etiquetados como buen o mal match, para evaluar el motor (RF-10). | Cada par se etiqueta una vez. |
 | `evaluacion_motor` | Resultado de evaluar una configuración (RF-10). | Métricas entre 0 y 1. |
 | `mensaje` | Mensaje entre dos usuarios (M4). | Remitente distinto del destinatario. |
-| `notificacion` | Aviso por match, invitación o cambio de estado (RF-08). | `enviada_email` funciona como cola de envío. |
+| `notificacion` | Aviso por match, invitación, postulación nueva o cambio de estado (RF-08). | `enviada_email` funciona como cola de envío. |
 
 Los tipos enumerados son `rol_usuario`, `modalidad`, `tipo_retribucion`, `estado_proyecto`, `estado_postulacion`, `estado_invitacion`, `tipo_notificacion`, `nivel_tecnologia` y `categoria_tecnologia`; sus valores están en `schema.sql`. El ciclo de vida de una postulación es el siguiente. El estado aceptada equivale a proyecto cerrado y es el último paso del embudo del dashboard.
 
@@ -398,9 +401,11 @@ stateDiagram-v2
 
 ## 4. Datos que usan el motor y el dashboard
 
-El motor (M3) calcula tres componentes, con valores entre 0 y 1, para cada par estudiante-proyecto, y los combina con los pesos de la configuración activa: `puntaje_total = peso_tecnologias * puntaje_tecnologias + peso_texto * puntaje_texto + peso_contexto * puntaje_contexto`. La similitud de tecnologías compara `estudiante_tecnologia` con `proyecto_tecnologia` (por ejemplo, con el índice de Jaccard). La similitud de textos compara la descripción y los proyectos previos del estudiante con la descripción, los objetivos y el perfil buscado del proyecto. El contexto penaliza cuando el estudiante tiene menos horas semanales que las requeridas o está por debajo del año mínimo del proyecto. El resultado se guarda en `match` con sus componentes, para poder explicar cada recomendación.
+El motor (M3) calcula tres componentes, con valores entre 0 y 1, para cada par estudiante-proyecto, y los combina con los pesos de la configuración activa: `puntaje_total = peso_tecnologias * puntaje_tecnologias + peso_texto * puntaje_texto + peso_contexto * puntaje_contexto`. Si una configuración no calcula un componente, su peso es 0 y ese término no se suma; por eso `puntaje_texto` queda vacío en v1 sin afectar el total.
 
-La evaluación (RF-10) compara los matches de una configuración con `match_referencia` y guarda en `evaluacion_motor` la precisión, el recall y la precisión en el top-5. Estas métricas se calculan solo sobre pares etiquetados: un par recomendado que no está en `match_referencia` no cuenta como acierto ni como error. Por eso se registran también los pares no relevantes, que permiten medir los falsos positivos. El seed tiene 31 pares relevantes y 9 no relevantes, y dos configuraciones para comparar: `v1-tags-contexto`, la versión simple del plan de la Entrega 1, y `v2-tags-texto-contexto`, que agrega el análisis de texto.
+En la versión 1, el puntaje de tecnologías es el índice de Jaccard: la cantidad de tecnologías que el estudiante y el proyecto tienen en común, dividida por la cantidad total de tecnologías distintas entre los dos. El puntaje de contexto es la proporción entre las horas semanales del estudiante y las del proyecto (como máximo 1), multiplicada por 0,5 si el estudiante está por debajo del año mínimo. La versión 2 suma la similitud de textos, que compara la descripción y los proyectos previos del estudiante con la descripción, los objetivos y el perfil buscado del proyecto. Los pesos de v1 (0,7 para tecnologías y 0,3 para contexto) y el umbral de 0,5 son valores iniciales: dan más importancia a las tecnologías porque es el dato más concreto del perfil, y se van a ajustar con los resultados de la evaluación. El resultado se guarda en `match` con sus componentes, para poder explicar cada recomendación.
+
+La evaluación (RF-10) compara los matches de una configuración con el conjunto de referencia (`match_referencia`) y guarda en `evaluacion_motor` la precisión, el recall y la precisión en el top-5. Estas métricas se calculan solo sobre pares etiquetados: un par recomendado que no está en el conjunto no cuenta como acierto ni como error. Por eso se registran también los pares no relevantes, que permiten medir los falsos positivos. El conjunto del seed tiene 31 pares relevantes y 17 no relevantes, y fue propuesto con asistencia de IA; el equipo lo revisa y lo amplía durante la implementación. Ocho de los no relevantes son casos límite, que comparten parte del stack pero no cumplen el año o las tecnologías obligatorias. Aplicando la fórmula de v1 sobre el seed, la precisión da 0,93 y el recall 0,81, así que el conjunto no se resuelve de forma trivial. El seed incluye dos configuraciones para comparar: `v1-tags-contexto`, la versión simple del plan de la Entrega 1, y `v2-tags-texto-contexto`, que agrega el análisis de texto.
 
 El dashboard (M5) usa cuatro vistas. `vw_tecnologias_demandadas` cuenta los proyectos publicados por tecnología y mes. `vw_match_por_carrera_anio` da el porcentaje de estudiantes con recomendación y con proyecto aceptado, por carrera y año. `vw_tiempo_primer_proyecto` calcula los días entre el registro y la primera postulación aceptada. `vw_embudo_postulaciones` cuenta cuántas postulaciones llegan a entrevista y cuántas de esas terminan aceptadas. Las dos últimas dependen de `postulacion_historial`: con el estado actual solamente, no se distingue una postulación rechazada después de una entrevista de una rechazada sin entrevista.
 
@@ -430,13 +435,25 @@ Un proyecto lo publica una empresa o un docente. Se usan dos claves foráneas op
 
 ### 5.6 Triggers, vistas y validación
 
-Los triggers se usan solo para reglas que deben cumplirse aunque alguien modifique la base directamente: registrar el historial de postulaciones, validar que el perfil corresponda al rol del usuario y actualizar la fecha de modificación de la postulación, que usa el historial. Las reglas que dependen del caso de uso, como las transiciones válidas o los cupos, quedan en el backend. El backend también debe impedir cambiar el rol de un usuario que ya tiene perfil, porque el trigger solo valida al crear el perfil. El backend valida primero para dar mensajes claros, y la base vuelve a validar con restricciones. Las métricas se calculan con vistas y no con tablas de contadores, para que siempre coincidan con los datos. Si el volumen crece, se pueden convertir en vistas materializadas sin cambiar sus columnas.
+Los triggers se usan solo para reglas que deben cumplirse aunque alguien modifique la base directamente: registrar el historial de postulaciones, validar que el perfil corresponda al rol del usuario y actualizar la fecha de modificación de la postulación, que usa el historial. Las reglas que dependen del caso de uso quedan en el backend, que las valida en cada operación:
+
+- Las transiciones de estado de la postulación siguen el diagrama de la sección 3, y no se aceptan más postulaciones que los cupos del proyecto.
+- Solo se puede postular a proyectos publicados, y la fecha de postulación la fija el servidor.
+- Solo el publicador del proyecto puede invitar, y no se invita a un estudiante que ya tiene una postulación en ese proyecto.
+- Cuando el estudiante acepta una invitación, el backend crea la postulación en estado pendiente en ese mismo momento. Si la rechaza, no se crea ninguna postulación.
+- El año de cursada no puede superar la duración de la carrera, y cada materia aprobada debe pertenecer a la carrera del estudiante.
+- No se puede cambiar el rol de un usuario que ya tiene perfil, porque el trigger solo valida al crear el perfil.
+ Además, el backend valida primero para dar mensajes claros, y la base vuelve a validar con restricciones; por ejemplo, un CHECK exige fecha de cierre a los proyectos finalizados o cancelados, y solo a ellos. Las métricas se calculan con vistas y no con tablas de contadores, para que siempre coincidan con los datos. Si el volumen crece, se pueden convertir en vistas materializadas sin cambiar sus columnas.
 
 ### 5.7 Simplificación
 
-Se revisaron las 25 tablas del primer diseño y se eliminó todo dato que no usara ninguna funcionalidad, métrica ni cálculo del motor. Se quitaron la tabla `disponibilidad` y el tipo `dia_semana`, porque la disponibilidad de RF-02 se cubre con las horas semanales del perfil. También se quitó `token_recuperacion`: la recuperación de contraseña usa un token firmado que deja de valer cuando cambia la contraseña. Se eliminó `match.estado` y su tipo, que solo servían para una funcionalidad deseable, y cinco columnas sin uso. Entre ellas estaba `proyecto.fecha_creacion`, que se quitó después de comprobar que la métrica de tecnologías demandadas usa `fecha_publicacion`. En la auditoría previa a la entrega se aplicó el mismo criterio: se quitaron las fechas de modificación del perfil y del proyecto (con sus triggers), la duración de la carrera, el estado vencida de las invitaciones y `postulacion.id_invitacion` (ver 5.2).
+Se revisaron las 25 tablas del primer diseño y se eliminó todo dato que no usara ninguna funcionalidad, métrica ni cálculo del motor. Se quitaron la tabla `disponibilidad` y el tipo `dia_semana`, porque la disponibilidad de RF-02 se cubre con las horas semanales del perfil. También se quitó `token_recuperacion`: la recuperación de contraseña usa un token firmado que deja de valer cuando cambia la contraseña. Se eliminaron `match.estado` y su tipo, que solo servían para una funcionalidad deseable, y cinco columnas sin uso. Entre ellas estaba `proyecto.fecha_creacion`, que se quitó después de comprobar que la métrica de tecnologías demandadas usa `fecha_publicacion`. En la auditoría previa a la entrega se aplicó el mismo criterio: se quitaron las fechas de modificación del perfil y del proyecto (con sus triggers), el estado vencida de las invitaciones y `postulacion.id_invitacion` (ver 5.2). También se había quitado `carrera.duracion_anios`, pero fue un error: es el dato que permite validar que el año de cursada no supere la duración de la carrera, así que se restauró.
 
 Se mantuvo `match_referencia.es_relevante`, en lugar de guardar solo los pares relevantes y suponer que el resto no lo es. La evaluación del motor es la parte central del proyecto, y preferimos registrar explícitamente los pares no relevantes antes que depender de ese supuesto. Se descartaron otras simplificaciones: unir invitación con postulación distorsiona el embudo, reemplazar el historial por columnas de fecha pierde el orden de los cambios, y RF-02 exige las habilidades.
+
+### 5.8 Baja lógica
+
+Los usuarios no se borran: se desactivan con `usuario.activo`. Los proyectos tampoco se borran: se cancelan. Borrarlos eliminaría en cascada postulaciones, historial y pares de referencia, y con ellos las métricas y la evaluación del motor. Para que la base lo impida, las claves foráneas de `postulacion_historial`, de `match_referencia` y las que apuntan a `configuracion_motor` usan `ON DELETE RESTRICT`: no se puede borrar una postulación con historial, un estudiante o proyecto con pares de referencia, ni una configuración con matches o evaluaciones. Se mantiene el borrado en cascada solo para datos que no tienen sentido sin su dueño, como las tecnologías de un perfil o las de un proyecto.
 
 ## 6. Cambios respecto de la Entrega 1
 

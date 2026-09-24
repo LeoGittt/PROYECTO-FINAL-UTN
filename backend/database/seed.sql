@@ -10,8 +10,10 @@
 --   * 1 administrador, 5 empresas/organizaciones, 3 docentes y 20 estudiantes.
 --   * 14 proyectos en distintos estados, publicados entre febrero y septiembre de 2026.
 --   * 24 postulaciones con su historial de estados completo (alimentan el dashboard).
---   * 5 invitaciones, 2 configuraciones del motor y 40 matches de referencia
---     (31 relevantes y 9 no relevantes, etiquetados de forma explícita).
+--   * 5 invitaciones y 2 configuraciones del motor.
+--   * Un conjunto de referencia de 48 pares estudiante-proyecto (31 relevantes y 17 no
+--     relevantes, 8 de ellos casos límite), propuestos con asistencia de IA. El equipo los
+--     revisa y amplía durante la implementación.
 --
 -- Qué NO contiene (a propósito):
 --   * Filas en match ni en evaluacion_motor: las genera el motor de recomendación.
@@ -31,10 +33,10 @@ BEGIN;
 -- 1. CATÁLOGOS
 -- =============================================================================
 
-INSERT INTO carrera (nombre) VALUES
-    ('Tecnicatura Universitaria en Programación'),
-    ('Ingeniería en Sistemas de Información'),
-    ('Ingeniería Electrónica');
+INSERT INTO carrera (nombre, duracion_anios) VALUES
+    ('Tecnicatura Universitaria en Programación', 2),
+    ('Ingeniería en Sistemas de Información',     5),
+    ('Ingeniería Electrónica',                    5);
 
 -- Planes resumidos: tomados como referencia de los planes de la UTN; no son exhaustivos.
 INSERT INTO materia (id_carrera, nombre, anio_plan, cuatrimestre)
@@ -223,7 +225,7 @@ FROM (VALUES
      'Automatizo tareas repetitivas con Python: scraping con Scrapy y Selenium y carga de datos en PostgreSQL.',
      'Scraper de precios de supermercados que guarda históricos en PostgreSQL.',
      'https://github.com/demo-sherrera', NULL),
-    ('nicolas.peralta', 'Ingeniería Electrónica', 4, 10,
+    ('nicolas.peralta', 'Ingeniería Electrónica', 4, 12,
      'Sistemas embebidos e IoT: programo microcontroladores en C y Arduino y envío datos por MQTT.',
      'Estación meteorológica con Arduino que publica mediciones por MQTT.',
      'https://github.com/demo-nperalta', NULL),
@@ -235,7 +237,7 @@ FROM (VALUES
      'Desarrollo aplicaciones móviles con React Native y Firebase, siempre en TypeScript.',
      'App de lista de compras compartida con React Native y Firebase.',
      'https://github.com/demo-aromero', NULL),
-    ('julieta.molina', 'Ingeniería en Sistemas de Información', 2, 6,
+    ('julieta.molina', 'Ingeniería en Sistemas de Información', 2, 8,
      'Me gustan las bases de datos y resolver consultas SQL complejas. Programo en Python.',
      'Ejercicios de SQL resueltos y documentados para compañeros.',
      'https://github.com/demo-jmolina', NULL),
@@ -434,7 +436,7 @@ FROM (VALUES
      'Derivar automáticamente cada consulta al área que corresponde.',
      'Estudiante avanzado con Python y nociones de machine learning.',
      16, 12, 4, 1, 'remoto', 'certificado', 'Participación como colaborador en el proyecto de investigación',
-     'publicado', '2026-06-01 09:00-03', NULL),
+     'en_curso', '2026-06-01 09:00-03', NULL),
     ('gabriela.funes@agrodatoscuyo.test', 'App móvil de relevamiento a campo',
      'Aplicación móvil con React Native y Firebase para que los técnicos carguen relevamientos sin conexión y los sincronicen al volver.',
      'Digitalizar los relevamientos que hoy se hacen en papel.',
@@ -445,7 +447,7 @@ FROM (VALUES
      'Prototipo con sensores sobre Arduino programado en C que publica la temperatura por MQTT y dispara alertas.',
      'Evitar pérdidas de mercadería por cortes de frío no detectados.',
      'Electrónica o sistemas con experiencia en microcontroladores.',
-     10, 12, 3, 1, 'presencial', 'practica_profesional', 'Válido como Práctica Profesional Supervisada',
+     10, 12, 3, 2, 'presencial', 'practica_profesional', 'Válido como Práctica Profesional Supervisada',
      'publicado', '2026-06-20 08:00-03', NULL),
     ('martin.paz@andessoftware.test', 'Migración de la landing corporativa a Next.js',
      'Migrar la landing actual en HTML a Next.js con React y Tailwind CSS, mejorando rendimiento y SEO.',
@@ -581,6 +583,8 @@ JOIN usuario ui          ON ui.email = v.invitador;
 -- fechas explícitas. El trigger trg_postulacion_historial registra cada paso, así el
 -- historial queda igual al que generaría la aplicación real.
 --   estados[i] se alcanza dias[i] días después de la fecha de postulación.
+-- Cuando un estudiante acepta una invitación, el backend crea la postulación en estado
+-- pendiente en ese mismo momento: por eso esas postulaciones tienen la fecha de respuesta.
 DO $$
 DECLARE
     r        RECORD;
@@ -606,7 +610,7 @@ BEGIN
             ('lucia.fernandez',  'MVP de gestión de turnos para consultorios',    '2026-04-08 18:00-03',
              ARRAY['en_revision','rechazada'], ARRAY[3,9]),
             ('franco.dominguez', 'MVP de gestión de turnos para consultorios',    '2026-04-10 21:15-03',
-             ARRAY['en_revision','entrevista'], ARRAY[3,9]),
+             ARRAY['en_revision','entrevista'], ARRAY[1,2]),
             ('mateo.gimenez',    'MVP de gestión de turnos para consultorios',    '2026-04-12 20:00-03',
              ARRAY['en_revision'], ARRAY[4]),
             ('martina.castro',   'Sitio web institucional para la fundación',     '2026-04-20 17:30-03',
@@ -625,19 +629,19 @@ BEGIN
              ARRAY['en_revision','entrevista'], ARRAY[3,10]),
             ('rocio.navarro',    'Visualizador de rendimiento académico',         '2026-05-22 19:00-03',
              ARRAY['en_revision','rechazada'], ARRAY[4,7]),
-            ('joaquin.medina',   'Clasificador de consultas de alumnos con NLP',  '2026-06-05 10:30-03',
+            ('joaquin.medina',   'Clasificador de consultas de alumnos con NLP',  '2026-06-04 18:00-03',
              ARRAY['en_revision','entrevista','aceptada'], ARRAY[1,5,12]),
             ('milagros.cabrera', 'Visualizador de rendimiento académico',         '2026-06-20 16:00-03',
              ARRAY[]::text[], ARRAY[]::int[]),
             ('nicolas.peralta',  'Monitoreo de temperatura en cámaras de frío',   '2026-06-25 15:00-03',
              ARRAY['en_revision','entrevista','aceptada'], ARRAY[2,6,10]),
-            ('ezequiel.ortiz',   'Monitoreo de temperatura en cámaras de frío',   '2026-06-28 11:00-03',
+            ('ezequiel.ortiz',   'Monitoreo de temperatura en cámaras de frío',   '2026-06-27 20:00-03',
              ARRAY['en_revision','entrevista'], ARRAY[3,8]),
             ('franco.dominguez', 'Panel de monitoreo de servidores',              '2026-08-12 21:00-03',
              ARRAY['en_revision','entrevista'], ARRAY[2,7]),
             ('carolina.vega',    'Panel de monitoreo de servidores',              '2026-08-15 09:40-03',
              ARRAY['en_revision'], ARRAY[5]),
-            ('paula.benitez',    'Portal de resultados de laboratorio',           '2026-09-05 20:20-03',
+            ('paula.benitez',    'Portal de resultados de laboratorio',           '2026-09-04 19:30-03',
              ARRAY[]::text[], ARRAY[]::int[])
         ) AS t(usuario, proyecto, fecha, estados, dias)
     LOOP
@@ -677,9 +681,12 @@ VALUES
      'Versión completa: suma la similitud de textos entre la descripción del proyecto y el perfil.',
      0.500, 0.300, 0.200, 0.500, false);
 
--- Gold set marcado a mano por el equipo: 31 pares relevantes y 9 no relevantes, registrados
--- de forma explícita. La evaluación usa solo estos pares; un par sin etiquetar no cuenta
--- ni como acierto ni como error.
+-- Conjunto de referencia: 31 pares relevantes y 17 no relevantes, propuestos con asistencia
+-- de IA; el equipo los revisa y amplía durante la implementación. Los últimos 8 no relevantes
+-- son casos límite: comparten parte del stack, pero no alcanzan por año o les faltan
+-- tecnologías obligatorias. Algunos obtienen un puntaje alto, así que ponen a prueba al motor.
+-- La evaluación usa solo estos pares; un par sin etiquetar no cuenta ni como acierto ni
+-- como error.
 INSERT INTO match_referencia (id_estudiante, id_proyecto, es_relevante, id_usuario_etiquetador, observacion, fecha_etiquetado)
 SELECT e.id_estudiante, p.id_proyecto, v.relevante, adm.id_usuario, v.obs, '2026-09-15 18:00-03'::timestamptz
 FROM (VALUES
@@ -715,14 +722,22 @@ FROM (VALUES
     ('franco.dominguez', 'Dashboard de ventas para gerencia comercial',   true,  'React y TypeScript'),
     ('franco.dominguez', 'Migración de la landing corporativa a Next.js', true,  'Next.js avanzado'),
     ('julieta.molina',   'Corrector automático de ejercicios SQL',        true,  'SQL avanzado'),
-    ('julieta.molina',   'Automatización de reportes de flota',           true,  'Python; pocas horas pero alcanza'),
+    ('julieta.molina',   'Automatización de reportes de flota',           true,  'Python y horas justas'),
     ('agustin.romero',   'Dashboard de ventas para gerencia comercial',   true,  'React y TypeScript'),
     ('agustin.romero',   'Sitio web institucional para la fundación',     true,  'JavaScript avanzado'),
     ('ezequiel.ortiz',   'Monitoreo de temperatura en cámaras de frío',   true,  'Sensores y C'),
     ('paula.benitez',    'Portal de resultados de laboratorio',           true,  'Angular, Node.js y MongoDB'),
     ('paula.benitez',    'Dashboard de ventas para gerencia comercial',   true,  'TypeScript y Node.js'),
     ('carolina.vega',    'Panel de monitoreo de servidores',              false, 'Stack .NET, sin React ni Docker'),
-    ('rocio.navarro',    'Automatización de reportes de flota',           true,  'Python básico, año mínimo 1')
+    ('rocio.navarro',    'Automatización de reportes de flota',           true,  'Python básico, año mínimo 1'),
+    ('mateo.gimenez',    'Panel de monitoreo de servidores',              false, 'Comparte TypeScript y Docker, pero no sabe React y está por debajo del año mínimo'),
+    ('lucia.fernandez',  'Portal de resultados de laboratorio',           false, 'Frontend y TypeScript, pero el proyecto pide Angular y MongoDB'),
+    ('sofia.herrera',    'Clasificador de consultas de alumnos con NLP',  false, 'Python avanzado, pero sin machine learning y por debajo del año mínimo'),
+    ('camila.sosa',      'Panel de monitoreo de servidores',              false, 'Tiene Docker y las horas, pero no conoce el stack web'),
+    ('franco.dominguez', 'Portal de resultados de laboratorio',           false, 'TypeScript avanzado, pero el proyecto pide Angular, Node.js y MongoDB'),
+    ('ezequiel.ortiz',   'Scraper de precios de insumos agrícolas',       false, 'Python intermedio, pero sin scraping ni bases de datos'),
+    ('rocio.navarro',    'Corrector automático de ejercicios SQL',        false, 'Python y SQL básicos en primer año; el proyecto pide segundo año y PostgreSQL'),
+    ('agustin.romero',   'Panel de monitoreo de servidores',              false, 'React y TypeScript, pero le faltan Docker y Linux, que el proyecto exige')
 ) AS v(usuario, proyecto, relevante, obs)
 JOIN usuario u           ON u.email = v.usuario || '@alumnos.utnmatch.test'
 JOIN perfil_estudiante e ON e.id_usuario = u.id_usuario
@@ -763,7 +778,7 @@ FROM (VALUES
     ('ignacio.luna@alumnos.utnmatch.test', 'mensaje_nuevo',
      'Tenés un mensaje nuevo de Martín Paz.', '/mensajes',
      '2026-08-20 15:05-03', false, false),
-    ('martin.paz@andessoftware.test', 'cambio_estado_postulacion',
+    ('martin.paz@andessoftware.test', 'nueva_postulacion',
      'Carolina Vega se postuló a "Panel de monitoreo de servidores".', '/proyectos',
      '2026-08-15 09:40-03', true, true)
 ) AS v(usuario, tipo, mensaje, url, fecha, leida, email)

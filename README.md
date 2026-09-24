@@ -14,7 +14,7 @@ Mientras tanto, hay empresas que necesitan cosas chicas y concretas (un scraper,
 un MVP para validar una idea) y no tienen a quién pedírselas. Y hay cátedras y profesores que
 necesitan un mini producto para una investigación y terminan haciéndolo a mano.
 
-UTN Match junta esas dos puntas. Las empresas y las cátedras publican proyectos acotados,
+UTN Match junta esas dos puntas. Las empresas y los docentes de las cátedras publican proyectos acotados,
 los estudiantes arman su perfil, y la plataforma se encarga de sugerir quién encaja con qué.
 
 ## Por qué hace falta
@@ -36,7 +36,7 @@ El estudiante arma su perfil. Qué carrera hace, en qué año está, qué materi
 con qué tecnologías se maneja, cuántas horas por semana tiene disponibles y dónde se puede
 ver lo que hizo (GitHub, portfolio).
 
-La empresa o la cátedra publica un proyecto. Qué necesitan, qué tecnologías involucra,
+La empresa o el docente de una cátedra publica un proyecto. Qué necesitan, qué tecnologías involucra,
 cuánto tiempo estiman, si es remoto o presencial, y qué ofrecen a cambio: puede ser plata,
 puede ser una práctica profesional, puede ser un certificado.
 
@@ -68,8 +68,10 @@ Las tres cosas se combinan en un puntaje único, y ese puntaje es el que ordena 
 Cualquiera puede escribir un algoritmo de recomendación. Lo difícil, y lo interesante para
 un proyecto final, es demostrar que anda.
 
-Para eso armamos un conjunto de casos donde nosotros marcamos a mano cuáles serían los
-matches correctos, y comparamos contra eso. Así podemos responder preguntas concretas:
+Para eso armamos un conjunto de casos de referencia, donde cada par estudiante-proyecto está
+marcado como buen o mal match, y comparamos contra eso. La primera versión la propusimos con
+asistencia de IA, y la vamos a revisar y ampliar durante la implementación. Así podemos
+responder preguntas concretas:
 de las recomendaciones que hace el sistema, ¿cuántas eran buenas? De todos los buenos matches
 posibles, ¿cuántos encontró? ¿Las cinco primeras sugerencias son realmente las mejores?
 
@@ -135,8 +137,15 @@ El esquema de la base está en [backend/database/schema.sql](backend/database/sc
 
 ## Cómo levantarlo
 
-Necesitás Node.js 20 o superior. Cada aplicación se instala y se corre por separado,
-en dos terminales distintas.
+Necesitás Node.js 20.9 o superior (lo exige Next.js 16). Primero se clona el repositorio:
+
+```bash
+git clone https://github.com/LeoGittt/PROYECTO-FINAL-UTN.git
+cd PROYECTO-FINAL-UTN
+```
+
+Cada aplicación se instala y se corre por separado, en dos terminales distintas. Por ahora
+ninguna de las dos necesita la base de datos para arrancar.
 
 ```bash
 # Terminal 1: la API
@@ -169,12 +178,21 @@ carga automática del archivo `.env` en el backend.
 
 ### Base de datos
 
-Necesitás PostgreSQL 15 o superior (local o en Supabase). Sobre una base vacía:
+Necesitás PostgreSQL 15 o superior, local o en Supabase. Los scripts se ejecutan sobre una
+base vacía, primero el esquema y después los datos de ejemplo. Con PostgreSQL local:
 
 ```bash
 createdb utn_match
 psql -d utn_match -f backend/database/schema.sql
 psql -d utn_match -f backend/database/seed.sql
+```
+
+En Supabase no se usa `createdb`: se pasa la cadena de conexión del proyecto (la misma de
+`DATABASE_URL`) a `psql`, o se pega el contenido de cada archivo en el editor SQL del panel.
+
+```bash
+psql "$DATABASE_URL" -f backend/database/schema.sql
+psql "$DATABASE_URL" -f backend/database/seed.sql
 ```
 
 Todos los usuarios de ejemplo usan la contraseña `UtnMatch2026!`.

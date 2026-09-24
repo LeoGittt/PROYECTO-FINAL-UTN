@@ -14,6 +14,9 @@
 --   * Sin tildes ni "ñ" en identificadores (anio_cursada, contrasena_hash).
 --   * Fechas con zona horaria (TIMESTAMPTZ); días calendario con DATE.
 --   * No depende de ninguna extensión de PostgreSQL.
+--   * Baja lógica: los usuarios se desactivan (usuario.activo) y los proyectos se cancelan
+--     (estado 'cancelado'); no se borran. Las FK del historial, del conjunto de referencia y
+--     de la configuración del motor usan RESTRICT para que no se pierda esa historia.
 -- =============================================================================
 
 BEGIN;
@@ -44,7 +47,7 @@ CREATE TYPE estado_invitacion AS ENUM ('pendiente', 'aceptada', 'rechazada');
 
 -- Eventos que generan notificaciones (RF-08).
 CREATE TYPE tipo_notificacion AS ENUM
-    ('nuevo_match', 'invitacion', 'cambio_estado_postulacion', 'cambio_estado_proyecto', 'mensaje_nuevo');
+    ('nuevo_match', 'invitacion', 'nueva_postulacion', 'cambio_estado_postulacion', 'cambio_estado_proyecto', 'mensaje_nuevo');
 
 CREATE TYPE nivel_tecnologia AS ENUM ('basico', 'intermedio', 'avanzado');
 
@@ -141,8 +144,10 @@ COMMENT ON TABLE usuario IS
 CREATE TABLE carrera (
     id_carrera          BIGINT GENERATED ALWAYS AS IDENTITY,
     nombre              VARCHAR(120) NOT NULL,
+    duracion_anios      SMALLINT     NOT NULL,          -- el backend valida anio_cursada <= duracion_anios
     CONSTRAINT pk_carrera PRIMARY KEY (id_carrera),
-    CONSTRAINT uq_carrera_nombre UNIQUE (nombre)
+    CONSTRAINT uq_carrera_nombre UNIQUE (nombre),
+    CONSTRAINT ck_carrera_duracion CHECK (duracion_anios BETWEEN 1 AND 6)
 );
 
 CREATE TABLE perfil_estudiante (
@@ -319,7 +324,9 @@ CREATE TABLE proyecto (
     CONSTRAINT ck_proyecto_cupos    CHECK (cupos BETWEEN 1 AND 20),
     -- Todo proyecto que salió de borrador tiene fecha de publicación.
     CONSTRAINT ck_proyecto_publicacion CHECK (estado = 'borrador' OR fecha_publicacion IS NOT NULL),
-    CONSTRAINT ck_proyecto_cierre CHECK (fecha_cierre IS NULL OR fecha_cierre >= fecha_publicacion)
+    CONSTRAINT ck_proyecto_cierre CHECK (fecha_cierre IS NULL OR fecha_cierre >= fecha_publicacion),
+    -- Un proyecto finalizado o cancelado tiene fecha de cierre, y solo esos la tienen.
+    CONSTRAINT ck_proyecto_cierre_estado CHECK ((estado IN ('finalizado', 'cancelado')) = (fecha_cierre IS NOT NULL))
 );
 -- Índices parciales: cada FK solo indexa las filas donde tiene valor.
 CREATE INDEX ix_proyecto_empresa ON proyecto (id_empresa) WHERE id_empresa IS NOT NULL;
@@ -414,9 +421,9 @@ CREATE TABLE postulacion_historial (
     id_usuario_responsable BIGINT,
     CONSTRAINT pk_postulacion_historial PRIMARY KEY (id_historial),
     CONSTRAINT fk_historial_postulacion FOREIGN KEY (id_postulacion)
-        REFERENCES postulacion (id_postulacion) ON DELETE CASCADE,
+        REFERENCES postulacion (id_postulacion) ON DELETE RESTRICT,
     CONSTRAINT fk_historial_responsable FOREIGN KEY (id_usuario_responsable)
-        REFERENCES usuario (id_usuario) ON DELETE SET NULL,
+        REFERENCES usuario (id_usuario) ON DELETE RESTRICT,
     CONSTRAINT ck_historial_cambio CHECK (estado_anterior IS DISTINCT FROM estado_nuevo)
 );
 CREATE INDEX ix_historial_postulacion ON postulacion_historial (id_postulacion, fecha_cambio);
@@ -473,7 +480,7 @@ CREATE TABLE match (
     CONSTRAINT fk_match_proyecto FOREIGN KEY (id_proyecto)
         REFERENCES proyecto (id_proyecto) ON DELETE CASCADE,
     CONSTRAINT fk_match_configuracion FOREIGN KEY (id_configuracion)
-        REFERENCES configuracion_motor (id_configuracion) ON DELETE CASCADE,
+        REFERENCES configuracion_motor (id_configuracion) ON DELETE RESTRICT,
     -- Un puntaje por par y configuración: al recalcular se actualiza la fila (UPSERT).
     CONSTRAINT uq_match_par_configuracion UNIQUE (id_estudiante, id_proyecto, id_configuracion),
     CONSTRAINT ck_match_total       CHECK (puntaje_total       BETWEEN 0 AND 1),
@@ -491,7 +498,8 @@ COMMENT ON COLUMN match.puntaje_tecnologias IS 'Similitud entre los tags del est
 COMMENT ON COLUMN match.puntaje_texto       IS 'Similitud entre descripción del proyecto y descripción/proyectos previos del estudiante.';
 COMMENT ON COLUMN match.puntaje_contexto    IS 'Ajuste por horas disponibles vs. requeridas y año de cursada vs. año mínimo.';
 
--- Conjunto de referencia (gold set) marcado a mano por el equipo. Se registran de forma
+-- Conjunto de referencia: pares propuestos con asistencia de IA, que el equipo revisa y amplía
+-- durante la implementación. Se registran de forma
 -- explícita los pares relevantes Y los no relevantes: la evaluación usa solo pares
 -- etiquetados y nunca asume que un par sin etiquetar es no relevante.
 CREATE TABLE match_referencia (
@@ -504,11 +512,11 @@ CREATE TABLE match_referencia (
     fecha_etiquetado       TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT pk_match_referencia PRIMARY KEY (id_match_referencia),
     CONSTRAINT fk_match_ref_estudiante FOREIGN KEY (id_estudiante)
-        REFERENCES perfil_estudiante (id_estudiante) ON DELETE CASCADE,
+        REFERENCES perfil_estudiante (id_estudiante) ON DELETE RESTRICT,
     CONSTRAINT fk_match_ref_proyecto FOREIGN KEY (id_proyecto)
-        REFERENCES proyecto (id_proyecto) ON DELETE CASCADE,
+        REFERENCES proyecto (id_proyecto) ON DELETE RESTRICT,
     CONSTRAINT fk_match_ref_etiquetador FOREIGN KEY (id_usuario_etiquetador)
-        REFERENCES usuario (id_usuario) ON DELETE SET NULL,
+        REFERENCES usuario (id_usuario) ON DELETE RESTRICT,
     CONSTRAINT uq_match_ref_par UNIQUE (id_estudiante, id_proyecto)
 );
 CREATE INDEX ix_match_ref_proyecto ON match_referencia (id_proyecto);
@@ -527,7 +535,7 @@ CREATE TABLE evaluacion_motor (
     observaciones         VARCHAR(500),
     CONSTRAINT pk_evaluacion_motor PRIMARY KEY (id_evaluacion),
     CONSTRAINT fk_evaluacion_configuracion FOREIGN KEY (id_configuracion)
-        REFERENCES configuracion_motor (id_configuracion) ON DELETE CASCADE,
+        REFERENCES configuracion_motor (id_configuracion) ON DELETE RESTRICT,
     CONSTRAINT ck_evaluacion_k CHECK (k BETWEEN 1 AND 50),
     CONSTRAINT ck_evaluacion_cantidad CHECK (cantidad_estudiantes >= 0),
     CONSTRAINT ck_evaluacion_metricas CHECK (

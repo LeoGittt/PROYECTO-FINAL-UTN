@@ -4,16 +4,20 @@ Trabajo Final Integrador, Tecnicatura Universitaria en Programación (UTN). Entr
 
 ## 1. Introducción
 
-UTN Match se desarrolla en los mismos cinco módulos definidos en la Entrega 1. Para cada uno se indican su objetivo, sus funcionalidades, los requisitos que cubre, las tablas que usa y sus dependencias. La arquitectura y las dependencias entre módulos están en [ARQUITECTURA.md](./ARQUITECTURA.md) y el modelo de datos en [DER.md](./DER.md).
+UTN Match conecta a estudiantes de la UTN con proyectos acotados que publican empresas y docentes de cátedras. Los usuarios tienen uno de cuatro roles: estudiante, empresa, docente o administrador. El estudiante carga su perfil (tecnologías, horas disponibles, año y materias), la empresa o el docente publica un proyecto, y un motor calcula el match, es decir, qué tan compatible es cada estudiante con cada proyecto. A partir de las recomendaciones, el estudiante se postula o el publicador lo invita, y un dashboard mide los resultados.
+
+El sistema se desarrolla en los mismos cinco módulos definidos en la Entrega 1. Para cada uno se indican su objetivo, sus funcionalidades, los requisitos que cubre, las tablas que usa y sus dependencias. La arquitectura y las dependencias entre módulos están en [ARQUITECTURA.md](./ARQUITECTURA.md) y el modelo de datos en [DER.md](./DER.md).
 
 Como somos tres personas y la entrega final es el 14/11, cada funcionalidad se marca como MVP o Deseable. MVP es lo necesario para demostrar el circuito completo (perfil, proyecto, recomendación, postulación y métricas) y la evaluación del motor. Deseable es lo que se hace si alcanza el tiempo.
+
+Hay tres cambios de alcance respecto de la Entrega 1. La mensajería interna, que la Entrega 1 lista en M4, pasa a ser deseable: ningún requisito funcional la exige (RF-08 pide notificaciones) y el contacto entre las partes puede hacerse con los datos del perfil. La recuperación de contraseña, listada en M1, también pasa a ser deseable: no es necesaria para demostrar el circuito y, mientras tanto, el administrador puede restablecer una contraseña. Y el cálculo del match de la Entrega 1 menciona las habilidades, pero la primera versión del motor usa solo tecnologías y contexto, siguiendo el plan de viabilidad de la Entrega 1; las habilidades se suman como señal adicional si alcanza el tiempo.
 
 ## 2. Requisitos
 
 Los requisitos RF-01 a RF-08 y RNF-01 a RNF-07 son los de la Entrega 1 y no cambian. En esta entrega se agregan tres requisitos funcionales, que formalizan funcionalidades que la Entrega 1 ya describía en el texto:
 
 - RF-09 (M1). Perfil académico: el sistema debe permitir al estudiante registrar su carrera, su año de cursada y las materias aprobadas, y usar el año de cursada como parte del contexto del cálculo de compatibilidad.
-- RF-10 (M3). Evaluación del motor: el sistema debe permitir registrar un conjunto de matches de referencia marcados a mano y calcular, para cada configuración del motor, la precisión, el recall y la precisión en el top-5, y guardar los resultados para compararlos.
+- RF-10 (M3). Evaluación del motor: el sistema debe permitir registrar un conjunto de referencia de pares estudiante-proyecto etiquetados como buen o mal match y calcular, para cada configuración del motor, la precisión, el recall y la precisión en el top-5, y guardar los resultados para compararlos.
 - RF-11 (M5). Dashboard de métricas: el sistema debe mostrar las tecnologías más demandadas y su evolución mensual, el porcentaje de estudiantes con match por carrera y año, el tiempo promedio hasta el primer proyecto y el embudo de postulación, entrevista y proyecto cerrado, registrando la fecha de cada cambio de estado de las postulaciones.
 
 | Requisito | Descripción breve | Módulos |
@@ -51,7 +55,7 @@ Objetivo: gestionar el registro, el inicio de sesión y los perfiles, y armar un
 - Recuperación de contraseña con un token firmado. Deseable.
 - Subida del CV como archivo. Deseable.
 
-RF-01 incluye el rol Administrador, pero el registro público solo permite elegir estudiante, empresa o docente: a los administradores los da de alta otro administrador desde M5, para que nadie pueda registrarse con permisos de administración. La disponibilidad que pide RF-02 se cubre con las horas semanales, que es el dato que usa el motor. Requisitos no funcionales: RNF-01 (perfil en menos de 5 minutos), RNF-03 (bcrypt) y RNF-05. Solo depende de los catálogos de M5.
+RF-01 incluye el rol Administrador, pero el registro público solo permite elegir estudiante, empresa o docente: a los administradores los da de alta otro administrador desde M5, para que nadie pueda registrarse con permisos de administración. La disponibilidad que pide RF-02 se cubre con las horas semanales, que son el dato que usa el motor. El backend valida que el año de cursada no supere la duración de la carrera y que las materias aprobadas pertenezcan a ella. Requisitos no funcionales: RNF-01 (perfil en menos de 5 minutos), RNF-03 (bcrypt) y RNF-05. Solo depende de los catálogos de M5.
 
 ### 3.2 M2: Gestión de Proyectos
 
@@ -72,8 +76,8 @@ Objetivo: recomendar a cada estudiante los proyectos que mejor encajan con su pe
 - Puntaje v1 (similitud de tecnologías y contexto), guardado con sus componentes y recalculado cuando cambia un perfil o un proyecto. MVP, RF-04 y RF-09.
 - Proyectos recomendados para el estudiante y estudiantes recomendados para cada proyecto, con el porcentaje de compatibilidad. MVP, RF-04.
 - Búsqueda de proyectos con filtros. MVP.
-- Postulación, retiro y cambio de estado de las postulaciones por parte del publicador. MVP, RF-05 y RF-11.
-- Invitaciones a estudiantes recomendados. MVP, RF-05.
+- Postulación y retiro por parte del estudiante, y cambio de estado de las postulaciones por parte del publicador. MVP, RF-05 y RF-11.
+- Invitaciones a estudiantes recomendados. Al aceptar una invitación se crea la postulación en estado pendiente; si se rechaza, no se crea. MVP, RF-05.
 - Conjunto de referencia, evaluación de cada configuración y comparación entre configuraciones. MVP, RF-10.
 - Similitud de textos (configuración v2). Deseable, con prioridad sobre los demás deseables.
 - Uso de habilidades y materias como señales adicionales, y pantallas para etiquetar y configurar el motor. Deseable.
@@ -84,12 +88,12 @@ El análisis de texto no está en el MVP porque la Entrega 1 lo plantea como mej
 
 Objetivo: avisar a las partes lo que ocurre después del match y permitirles seguir sus postulaciones.
 
-- Notificaciones en la plataforma y por email ante un nuevo match, una invitación o un cambio de estado. MVP, RF-08.
+- Notificaciones en la plataforma y por email ante un nuevo match, una invitación, una postulación nueva (para el publicador) o un cambio de estado. MVP, RF-08.
 - Seguimiento de cada postulación a partir de su historial. MVP, RF-05.
 - Reintento de emails fallidos y preferencias de notificación. Deseable.
-- Mensajería interna. Deseable, porque ningún requisito la exige.
+- Mensajería interna. Deseable (ver sección 1).
 
-Requisitos no funcionales: RNF-04 (el email se envía después de guardar la notificación, así que una falla del correo no afecta la operación principal). Depende de M1 y M3, y ningún módulo depende de M4. El plan de trabajo de la Entrega 1 no le asigna una etapa propia: se construye junto con las etapas de postulaciones y del motor.
+Requisitos no funcionales: RNF-04 (el email se envía después de guardar la notificación, así que una falla en el envío no afecta la operación principal). Depende de M1 y M3, y ningún módulo depende de M4. El plan de trabajo de la Entrega 1 no le asigna una etapa propia: se construye junto con las etapas de postulaciones y del motor.
 
 ### 3.5 M5: Administración y Reportes
 
