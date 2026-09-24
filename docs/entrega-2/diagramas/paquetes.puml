@@ -1,0 +1,81 @@
+@startuml paquetes
+' UTN Match: diagrama de paquetes (arquitectura en 4 capas)
+' Documentación: docs/entrega-2/ARQUITECTURA.md
+' Convención UML: la flecha punteada va DESDE el paquete que usa HACIA el paquete usado.
+
+!pragma layout smetana
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam packageStyle folder
+
+title UTN Match: diagrama de paquetes
+
+package "Presentación" as capa_presentacion {
+  package "web (Next.js)" as web {
+  }
+  package "api REST (controladores NestJS)" as api {
+  }
+}
+
+package "Aplicación" as capa_aplicacion {
+  package "M1 perfiles" as app_perfiles {
+  }
+  package "M2 proyectos" as app_proyectos {
+  }
+  package "M3 matching" as app_matching {
+  }
+  package "M4 comunicacion" as app_comunicacion {
+  }
+  package "M5 administracion" as app_administracion {
+  }
+  package "M5 catalogos" as app_catalogos {
+  }
+}
+
+package "Dominio" as capa_dominio {
+  package "perfiles " as dom_perfiles {
+  }
+  package "proyectos " as dom_proyectos {
+  }
+  package "matching (motor, evaluación, postulación)" as dom_matching {
+  }
+  package "comunicacion " as dom_comunicacion {
+  }
+  package "eventos de dominio (interfaz PublicadorEventos)" as dom_eventos {
+  }
+}
+
+package "Infraestructura" as capa_infraestructura {
+  package "persistencia PostgreSQL (repositorios y vistas)" as persistencia {
+  }
+  package "correo (adaptador de email)" as correo {
+  }
+  package "bus de eventos (implementa PublicadorEventos)" as bus {
+  }
+}
+
+' --- Orden vertical de las capas (enlaces invisibles, solo para el layout) ---
+capa_aplicacion -[hidden]down- capa_dominio
+capa_dominio -[hidden]down- capa_infraestructura
+
+' --- Dependencias entre capas ---
+web ..> api : <<use>> HTTP/JSON
+api ..> capa_aplicacion : <<use>>
+capa_aplicacion ..> capa_dominio : <<use>>
+capa_infraestructura .up.> capa_dominio : <<implementa puertos>>
+bus .up.> dom_eventos : <<implementa>>
+
+' --- Dependencias entre módulos (capa de Aplicación) ---
+app_perfiles ..> app_catalogos : <<use>>
+app_proyectos ..> app_perfiles : <<use>>
+app_proyectos ..> app_catalogos : <<use>>
+app_matching ..> app_perfiles : <<use>>
+app_matching ..> app_proyectos : <<use>>
+app_comunicacion ..> app_perfiles : <<use>>
+app_comunicacion ..> app_matching : <<use>>
+app_administracion ..> app_perfiles : <<use>>
+app_administracion ..> app_proyectos : <<use>>
+app_administracion ..> app_matching : <<use>>
+
+@enduml
