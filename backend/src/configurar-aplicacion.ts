@@ -16,6 +16,17 @@ export function configurarAplicacion(
 ): void {
   app.setGlobalPrefix(PREFIJO_API);
   app.use(helmet());
+  // Las respuestas llevan datos de sesión y de personas: ningún caché debe guardarlas.
+  app.use(
+    (
+      _solicitud: unknown,
+      respuesta: { setHeader(nombre: string, valor: string): void },
+      siguiente: () => void,
+    ) => {
+      respuesta.setHeader('Cache-Control', 'no-store');
+      siguiente();
+    },
+  );
   app.enableCors({
     origin: configuracion.frontendUrls,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

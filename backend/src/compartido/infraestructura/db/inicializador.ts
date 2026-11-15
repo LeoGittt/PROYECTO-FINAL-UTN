@@ -12,8 +12,8 @@ export type ResultadoInicializacion = 'inicializada' | 'existente';
 
 /**
  * Primer arranque: si la base no tiene el esquema (no existe la tabla `usuario`), aplica
- * `schema.sql` y después `seed.sql`. Si ya lo tiene, no toca nada. Si falla a mitad de
- * camino, deja la base vacía para que el próximo arranque reintente.
+ * `schema.sql` y después `seed.sql`. Si ya lo tiene, no toca nada. Si el seed falla, vacía lo
+ * que creó el esquema para que el próximo arranque reintente en lugar de creer que la base está lista.
  */
 export async function inicializarBaseSiEstaVacia(
   db: Db,
@@ -26,10 +26,13 @@ export async function inicializarBaseSiEstaVacia(
   if (rows[0]?.existe) return 'existente';
 
   logger.log('Base vacía: aplicando schema.sql y seed.sql');
+  // El esquema va en una sola transacción: si falla no queda nada creado, y limpiar acá podría
+  // borrar objetos ajenos que tengan el mismo nombre (por ejemplo, en una base compartida).
+  await db.ejecutarScript(await readFile(`${directorio}schema.sql`, 'utf8'));
   try {
-    await db.ejecutarScript(await readFile(`${directorio}schema.sql`, 'utf8'));
     await db.ejecutarScript(await readFile(`${directorio}seed.sql`, 'utf8'));
   } catch (error) {
+    // El esquema recién creado sí es nuestro: se vacía para poder reintentar.
     await vaciarBase(db, directorio).catch(() => undefined);
     throw error;
   }

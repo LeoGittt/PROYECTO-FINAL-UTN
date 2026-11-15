@@ -110,6 +110,10 @@ export function construirRespuestaError(excepcion: unknown): RespuestaError {
   // Red de seguridad: los repositorios traducen los errores esperados; esto cubre una
   // carrera entre dos solicitudes que el repositorio no pudo anticipar.
   if (esErrorPostgres(excepcion)) {
+    // Cualquier texto de entrada con un byte NUL llega hasta la base: es un error del cliente.
+    if (excepcion.code === SQLSTATE.CARACTER_NO_VALIDO) {
+      return respuesta(400, 'El texto contiene caracteres no válidos');
+    }
     if (excepcion.code === SQLSTATE.VIOLACION_UNICA) {
       return respuesta(409, 'Ya existe un registro con esos datos');
     }

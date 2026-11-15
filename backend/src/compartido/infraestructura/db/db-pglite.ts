@@ -60,7 +60,13 @@ export class DbPglite implements Db {
   }
 
   async ejecutarScript(sql: string): Promise<void> {
-    await this.conexion.exec(sql);
+    try {
+      await this.conexion.exec(sql);
+    } catch (error) {
+      // Si el script falla a mitad de una transacción, la conexión quedaría abortada.
+      await this.conexion.exec('ROLLBACK').catch(() => undefined);
+      throw error;
+    }
   }
 
   async close(): Promise<void> {

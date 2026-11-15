@@ -20,8 +20,9 @@ export class ServicioTokensJwt implements ServicioTokens {
 
   async verificar(token: string): Promise<number> {
     let sub: unknown;
+    let exp: unknown;
     try {
-      ({ sub } = await this.jwt.verifyAsync<{ sub?: unknown }>(token, {
+      ({ sub, exp } = await this.jwt.verifyAsync<{ sub?: unknown; exp?: unknown }>(token, {
         algorithms: [ALGORITMO],
       }));
     } catch (error) {
@@ -31,10 +32,10 @@ export class ServicioTokensJwt implements ServicioTokens {
           : 'La sesión no es válida',
       );
     }
-    const idUsuario = Number(sub);
-    if (typeof sub !== 'string' || !Number.isSafeInteger(idUsuario) || idUsuario < 1) {
+    // `sub` debe ser un entero canónico ("12", no "1e1" ni "012") y el token debe vencer.
+    if (typeof sub !== 'string' || !/^[1-9]\d{0,14}$/.test(sub) || typeof exp !== 'number') {
       throw new ErrorNoAutenticado('La sesión no es válida');
     }
-    return idUsuario;
+    return Number(sub);
   }
 }

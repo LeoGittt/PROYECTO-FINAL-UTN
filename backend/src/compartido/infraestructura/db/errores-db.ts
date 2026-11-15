@@ -8,6 +8,8 @@ interface ErrorPostgres {
 }
 
 export const SQLSTATE = {
+  /** Texto con un carácter que PostgreSQL no admite (por ejemplo, el byte NUL). */
+  CARACTER_NO_VALIDO: '22021',
   VIOLACION_UNICA: '23505',
   VIOLACION_CLAVE_FORANEA: '23503',
   VIOLACION_RESTRICCION_CHECK: '23514',

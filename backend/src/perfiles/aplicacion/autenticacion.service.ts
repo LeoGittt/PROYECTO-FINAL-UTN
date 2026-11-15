@@ -42,7 +42,10 @@ export class AutenticacionService implements ValidadorSesion {
     @Inject(USUARIO_REPOSITORY) private readonly usuarios: UsuarioRepository,
     @Inject(HASHEADOR_CONTRASENAS) private readonly hasheador: HasheadorContrasenas,
     @Inject(SERVICIO_TOKENS) private readonly tokens: ServicioTokens,
-  ) {}
+  ) {
+    // Se calcula al arrancar: si se hiciera en el primer login, ese pedido tardaría más y delataría el email.
+    void this.obtenerHashDeRelleno();
+  }
 
   /** Alta de una cuenta con la política de contraseñas aplicada. 409 si el email ya existe. */
   async crearCuenta(datos: DatosCuenta): Promise<UsuarioDto> {
