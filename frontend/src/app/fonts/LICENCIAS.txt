@@ -1,0 +1,9 @@
+Tipografías incluidas en esta carpeta, todas bajo la licencia SIL Open Font License 1.1
+(https://openfontlicense.org). Se redistribuyen sin modificaciones, en su subconjunto latino.
+
+- Bricolage Grotesque. Copyright 2022 The Bricolage Grotesque Project Authors (https://github.com/ateliertriay/bricolage)
+- Instrument Sans. Copyright 2022 The Instrument Sans Project Authors (https://github.com/Instrument/instrument-sans)
+- JetBrains Mono. Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
+
+Origen de los archivos: paquetes npm @fontsource-variable/bricolage-grotesque, @fontsource-variable/instrument-sans
+y @fontsource-variable/jetbrains-mono (versión 5.3.0).
