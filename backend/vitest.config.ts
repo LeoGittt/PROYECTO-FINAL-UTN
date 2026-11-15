@@ -1,13 +1,15 @@
 import { defineConfig } from 'vitest/config';
-import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
-  // Resolves the path aliases declared in tsconfig.json, including the ones
-  // added by `nest g library`.
-  plugins: [tsconfigPaths()],
+  // Resuelve los alias declarados en tsconfig.json (Vite lo soporta de forma nativa).
+  resolve: { tsconfigPaths: true },
   test: {
     globals: true,
     root: './',
     include: ['**/*.spec.ts'],
+    setupFiles: ['./test/ayudantes/silenciar-logs.ts'],
+    // PGlite arranca un PostgreSQL en WebAssembly: la primera prueba de cada archivo tarda más.
+    testTimeout: 20_000,
+    hookTimeout: 60_000,
   },
 });
