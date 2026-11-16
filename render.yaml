@@ -1,0 +1,40 @@
+# Blueprint de Render para el backend de UTN Match.
+# La base de datos es Supabase (PostgreSQL) y el frontend se publica en Vercel;
+# los pasos completos están en docs/DEPLOY.md.
+services:
+  - type: web
+    name: utn-match-api
+    runtime: node
+    region: virginia
+    plan: free
+    rootDir: backend
+    # Se instalan también las devDependencies porque `nest build` las necesita.
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      # Cadena de conexión del "Session pooler" de Supabase (ver docs/DEPLOY.md).
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SSL
+        value: "true"
+      # Aplica schema.sql y seed.sql solo si la base está vacía.
+      - key: DB_AUTO_INIT
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
+      # URL pública del frontend en Vercel, sin barra final.
+      - key: FRONTEND_URL
+        sync: false
+      # Render pone un proxy delante de la API.
+      - key: TRUST_PROXY
+        value: "1"
+      # Emails de las notificaciones (RF-08). Con `log` se escriben en el log del servicio; para
+      # enviarlos de verdad, cambiar a `smtp` y completar SMTP_* (ver docs/DEPLOY.md).
+      - key: EMAIL_TRANSPORT
+        value: log
