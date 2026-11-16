@@ -33,6 +33,16 @@ export function formatearFechaHora(iso: string | null | undefined): string {
   }).format(fecha);
 }
 
+/**
+ * Mes de un reporte: "2026-09-01" -> "sept 2026". Se leen el año y el mes del texto (no se crea la
+ * fecha en UTC), así la zona horaria nunca la corre al mes anterior.
+ */
+export function formatearMes(iso: string): string {
+  const [anio, mes] = iso.slice(0, 7).split("-").map(Number);
+  if (!anio || !mes) return "—";
+  return new Intl.DateTimeFormat(LOCALE, { month: "short", year: "numeric" }).format(new Date(anio, mes - 1, 1));
+}
+
 /** Iniciales para avatares: "Ana María Pérez" -> "AP". */
 export function iniciales(nombre: string, apellido?: string): string {
   const partes = [nombre, apellido ?? ""]

@@ -128,7 +128,7 @@ El backend guarda en `match` el puntaje de cada estudiante activo con cada proye
 |---|---|---|
 | `GET /matching/configuraciones` | admin | `[{ idConfiguracion, nombre, descripcion, pesoTecnologias, pesoTexto, pesoContexto, umbralRecomendacion, activa }]` |
 | `POST /matching/configuraciones/:id/activar` | admin | Activa la configuración (queda como única activa) y recalcula todos los puntajes con ella. Devuelve `{ pares, milisegundos }`. 404 si no existe |
-| `POST /matching/recalcular` | admin | Recalcula todos los pares con la configuración activa |
+| `POST /matching/recalcular` | admin | Recalcula todos los pares con la configuración activa → 200 `{ pares, milisegundos }` |
 | `GET /matching/referencia` | admin | `[{ idMatchReferencia, idEstudiante, estudiante, idProyecto, proyecto, esRelevante, observacion }]`, el más nuevo primero. `estudiante` es "Nombre Apellido" y `proyecto`, el título |
 | `PUT /matching/referencia` | admin | `{ idEstudiante, idProyecto, esRelevante, observacion? }` (upsert: un par se etiqueta una sola vez). 200 con el par. 404 si el estudiante o el proyecto no existen |
 | `DELETE /matching/referencia/:id` | admin | 204. 404 si no existe |
