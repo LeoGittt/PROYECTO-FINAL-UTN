@@ -56,8 +56,11 @@ export interface EventosDominio {
   'proyecto.estado_cambiado': {
     idProyecto: number;
     titulo: string;
+    idUsuarioPublicador: number;
     estadoAnterior: string;
     estadoNuevo: string;
+    /** Solo cuando la administración lo suspende. */
+    motivo?: string;
   };
   /** M3: un estudiante se postuló, o aceptó una invitación (que crea la postulación). */
   'postulacion.creada': {
@@ -73,6 +76,7 @@ export interface EventosDominio {
     idProyecto: number;
     tituloProyecto: string;
     idUsuarioEstudiante: number;
+    idUsuarioPublicador: number;
     estadoAnterior: string;
     estadoNuevo: string;
   };

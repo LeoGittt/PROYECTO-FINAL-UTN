@@ -202,15 +202,21 @@ export class ProyectosService {
   }
 
   /** Cambia el estado si nadie lo cambió mientras tanto, y avisa con `proyecto.estado_cambiado`. */
-  private async aplicarCambioDeEstado(proyecto: ProyectoDto, estadoNuevo: EstadoProyecto): Promise<void> {
+  private async aplicarCambioDeEstado(
+    proyecto: ProyectoDto,
+    estadoNuevo: EstadoProyecto,
+    motivo?: string,
+  ): Promise<void> {
     if (!(await this.repositorio.cambiarEstado(proyecto.idProyecto, proyecto.estado, estadoNuevo))) {
       throw new ErrorConflicto('El proyecto cambió de estado mientras tanto. Recargue la página');
     }
     await this.eventos.publicar('proyecto.estado_cambiado', {
       idProyecto: proyecto.idProyecto,
       titulo: proyecto.titulo,
+      idUsuarioPublicador: proyecto.publicador.idUsuario,
       estadoAnterior: proyecto.estado,
       estadoNuevo,
+      motivo,
     });
   }
 

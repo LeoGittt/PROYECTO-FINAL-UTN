@@ -356,6 +356,7 @@ describe('Postulaciones e invitaciones (e2e)', () => {
         idProyecto: proyecto.idProyecto,
         tituloProyecto: 'Proyecto de prueba',
         idUsuarioEstudiante: estudiante.idUsuario,
+        idUsuarioPublicador: empresa.idUsuario,
         estadoAnterior: 'entrevista',
         estadoNuevo: 'aceptada',
       });

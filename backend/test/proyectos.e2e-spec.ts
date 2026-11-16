@@ -189,7 +189,13 @@ describe('Proyectos (e2e)', () => {
           ['proyecto.actualizado', { idProyecto }],
           [
             'proyecto.estado_cambiado',
-            { idProyecto, titulo: 'Con eventos', estadoAnterior: 'publicado', estadoNuevo: 'en_curso' },
+            {
+              idProyecto,
+              titulo: 'Con eventos',
+              idUsuarioPublicador: empresa.idUsuario,
+              estadoAnterior: 'publicado',
+              estadoNuevo: 'en_curso',
+            },
           ],
         ]);
       } finally {

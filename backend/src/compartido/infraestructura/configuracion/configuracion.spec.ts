@@ -113,4 +113,35 @@ describe('cargarConfiguracion', () => {
     }).seguridad;
     expect(limiteAuth).toEqual({ maximo: 5, ventanaMs: 30_000 });
   });
+
+  it('sin variables de email los escribe en el log y los enlaces apuntan a la aplicación web', () => {
+    expect(cargarConfiguracion({ FRONTEND_URL: 'https://utnmatch.app/' }).email).toEqual({
+      transporte: 'log',
+      smtp: null,
+      remitente: 'UTN Match <no-responder@utnmatch.local>',
+      urlAplicacion: 'https://utnmatch.app',
+    });
+  });
+
+  it('con EMAIL_TRANSPORT=smtp toma el servidor SMTP de las variables', () => {
+    const { email } = cargarConfiguracion({
+      EMAIL_TRANSPORT: 'smtp',
+      SMTP_HOST: 'smtp.ejemplo.com',
+      SMTP_PORT: '465',
+      SMTP_SECURE: 'true',
+      SMTP_USER: 'usuario',
+      SMTP_PASSWORD: 'clave',
+      EMAIL_FROM: 'UTN Match <avisos@ejemplo.com>',
+    });
+    expect(email).toMatchObject({
+      transporte: 'smtp',
+      smtp: { host: 'smtp.ejemplo.com', puerto: 465, seguro: true, usuario: 'usuario', contrasena: 'clave' },
+      remitente: 'UTN Match <avisos@ejemplo.com>',
+    });
+  });
+
+  it('rechaza un transporte desconocido y SMTP sin servidor', () => {
+    expect(() => cargarConfiguracion({ EMAIL_TRANSPORT: 'paloma' })).toThrow('EMAIL_TRANSPORT debe ser log o smtp');
+    expect(() => cargarConfiguracion({ EMAIL_TRANSPORT: 'smtp' })).toThrow('SMTP_HOST es obligatorio con EMAIL_TRANSPORT=smtp');
+  });
 });

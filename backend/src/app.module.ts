@@ -2,6 +2,7 @@ import { Module, type DynamicModule } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { CatalogosModule } from './administracion/catalogos/catalogos.module.js';
 import { CompartidoModule } from './compartido/compartido.module.js';
+import { ComunicacionModule } from './comunicacion/comunicacion.module.js';
 import type { Configuracion } from './compartido/infraestructura/configuracion/configuracion.js';
 import { GuardAcceso } from './compartido/infraestructura/seguridad/guard-acceso.js';
 import { MatchingModule } from './matching/matching.module.js';
@@ -23,6 +24,7 @@ export class AppModule {
         PerfilesModule,
         ProyectosModule,
         MatchingModule,
+        ComunicacionModule,
       ],
       providers: [
         // Un único guard global: toda ruta exige sesión salvo las marcadas con `@Public()`.

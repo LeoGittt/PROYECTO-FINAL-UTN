@@ -28,3 +28,6 @@ export const idsSinRepetidosEsquema = z
   .refine((ids) => new Set(ids).size === ids.length, {
     message: 'No puede haber elementos repetidos',
   });
+
+/** Un booleano que llega en la query string como `true` o `false`. */
+export const booleanoQuery = z.enum(['true', 'false']).transform((valor) => valor === 'true');

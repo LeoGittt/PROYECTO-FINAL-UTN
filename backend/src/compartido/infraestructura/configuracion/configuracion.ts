@@ -32,6 +32,14 @@ export interface Configuracion {
     /** Saltos de proxy confiables para `req.ip` (0 = no hay proxy). */
     confiarEnProxy: number;
   };
+  email: {
+    /** `log`: el email se escribe en el log (desarrollo). `smtp`: se envía por SMTP. */
+    transporte: 'log' | 'smtp';
+    smtp: { host: string; puerto: number; seguro: boolean; usuario?: string; contrasena?: string } | null;
+    remitente: string;
+    /** Base de los enlaces de los emails: la aplicación web (el primer `FRONTEND_URL`). */
+    urlAplicacion: string;
+  };
 }
 
 export const CONFIGURACION = Symbol('CONFIGURACION');
@@ -134,6 +142,15 @@ export function cargarConfiguracion(
     );
   }
 
+  const transporte = texto('EMAIL_TRANSPORT')?.toLowerCase() ?? 'log';
+  if (transporte !== 'log' && transporte !== 'smtp') {
+    errores.push(`EMAIL_TRANSPORT debe ser log o smtp (recibido: "${transporte}")`);
+  }
+  const smtpHost = texto('SMTP_HOST');
+  if (transporte === 'smtp' && !smtpHost) {
+    errores.push('SMTP_HOST es obligatorio con EMAIL_TRANSPORT=smtp');
+  }
+
   const configuracion: Configuracion = {
     entorno,
     puerto: entero('PORT', 3001, 1, 65535),
@@ -155,6 +172,21 @@ export function cargarConfiguracion(
         ventanaMs: entero('RATE_LIMIT_AUTH_WINDOW_SECONDS', 60, 1, 86400) * 1000,
       },
       confiarEnProxy: entero('TRUST_PROXY', 0, 0, 10),
+    },
+    email: {
+      transporte: transporte === 'smtp' ? 'smtp' : 'log',
+      smtp:
+        transporte === 'smtp' && smtpHost
+          ? {
+              host: smtpHost,
+              puerto: entero('SMTP_PORT', 587, 1, 65535),
+              seguro: booleano('SMTP_SECURE', false),
+              usuario: texto('SMTP_USER'),
+              contrasena: texto('SMTP_PASSWORD'),
+            }
+          : null,
+      remitente: texto('EMAIL_FROM') ?? 'UTN Match <no-responder@utnmatch.local>',
+      urlAplicacion: frontendUrls[0] ?? 'http://localhost:3000',
     },
   };
 

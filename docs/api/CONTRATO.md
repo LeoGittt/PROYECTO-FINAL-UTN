@@ -179,11 +179,13 @@ Máquina de estados: `pendiente` → `en_revision`, `entrevista`, `rechazada` o 
 
 | Método y ruta | Descripción |
 |---|---|
-| `GET /notificaciones?soloNoLeidas=true&limite=30` | `{ items, noLeidas }` |
-| `POST /notificaciones/:id/leer` | 204 |
+| `GET /notificaciones?soloNoLeidas=true&limite=30` | `{ items, noLeidas }`: las del usuario que inició sesión (cualquier rol), la más nueva primero. `limite` de 1 a 100, por defecto 30; `noLeidas` cuenta todas las no leídas |
+| `POST /notificaciones/:id/leer` | 204. 404 si no existe o es de otro usuario |
 | `POST /notificaciones/leer-todas` | 204 |
 
-Se generan a partir de los eventos del dominio: `match.nuevo` (al estudiante), `invitacion.enviada` (al estudiante), `postulacion.creada` (al publicador), `postulacion.estado_cambiado` (al estudiante) y `proyecto.estado_cambiado` (a los estudiantes con postulación activa). Primero se guarda la notificación y después se intenta el email; si el envío falla, la operación principal no se ve afectada.
+`tipo` es `nuevo_match`, `invitacion`, `nueva_postulacion`, `cambio_estado_postulacion` o `cambio_estado_proyecto`, y `urlReferencia` es la pantalla del frontend a la que lleva el aviso.
+
+Se generan a partir de los eventos del dominio: `match.nuevo` (al estudiante), `invitacion.enviada` (al estudiante), `postulacion.creada` (al publicador), `postulacion.estado_cambiado` (al estudiante; si el estudiante la retira, al publicador) y `proyecto.estado_cambiado` (a los estudiantes con una postulación que no está rechazada ni retirada; si la administración lo suspende o lo reactiva, también al publicador, con el motivo de la suspensión). Primero se guarda la notificación y después se intenta el email, sin esperarlo; si el envío falla, la operación principal no se ve afectada y la notificación queda sin marcar como enviada (`enviada_email`). El email sale por SMTP con `EMAIL_TRANSPORT=smtp`; por defecto (`log`) se escribe en la consola de la API.
 
 ## 7. Administración y reportes (M5)
 

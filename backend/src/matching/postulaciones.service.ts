@@ -119,6 +119,17 @@ export class PostulacionesService implements OnModuleInit {
     return this.armarPostulaciones(filas, usuario);
   }
 
+  /**
+   * Para M4: los usuarios de los estudiantes con una postulación activa (ni rechazada ni
+   * retirada) en el proyecto, a quienes se avisa cuando el proyecto cambia de estado.
+   */
+  async usuariosConPostulacionActiva(idProyecto: number): Promise<number[]> {
+    const filas = await this.repositorio.listarPostulaciones({ idProyecto });
+    const activas = filas.filter((f) => f.estado !== 'rechazada' && f.estado !== 'retirada');
+    const estudiantes = await this.perfiles.obtenerEstudiantes(activas.map((f) => f.idEstudiante));
+    return estudiantes.map((e) => e.idUsuario);
+  }
+
   /** Las postulaciones de un proyecto: solo para su dueño y el administrador. */
   async listarDeProyecto(
     idProyecto: number,
@@ -184,6 +195,7 @@ export class PostulacionesService implements OnModuleInit {
       idProyecto: proyecto.idProyecto,
       tituloProyecto: proyecto.titulo,
       idUsuarioEstudiante: estudiante.idUsuario,
+      idUsuarioPublicador: proyecto.publicador.idUsuario,
       estadoAnterior: fila.estado,
       estadoNuevo,
     });
