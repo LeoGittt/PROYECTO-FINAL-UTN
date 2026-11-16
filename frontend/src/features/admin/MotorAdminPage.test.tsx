@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ApiError } from "@/lib/api/client";
 import { api } from "@/lib/api/endpoints";
-import type { ConfiguracionMotor, Evaluacion, MatchReferencia } from "@/lib/api/types";
+import type { ConfiguracionMotor, Evaluacion, MatchReferencia, UsuarioAdmin } from "@/lib/api/types";
+import { proyectoDe } from "@/features/proyectos/fixtures";
 import { MotorAdminPage } from "./MotorAdminPage";
 
 const CONFIGURACIONES: ConfiguracionMotor[] = [
@@ -30,7 +31,23 @@ const EVALUACION: Evaluacion = {
   observaciones: null,
 };
 
+const ESTUDIANTES: UsuarioAdmin[] = [
+  { idUsuario: 30, nombre: "Ana", apellido: "Pérez", email: "ana@utn.edu.ar", rol: "estudiante", activo: true, fechaRegistro: "2026-04-10T12:00:00Z", idEstudiante: 1 },
+  { idUsuario: 31, nombre: "Marta", apellido: "Sosa", email: "marta@utn.edu.ar", rol: "estudiante", activo: true, fechaRegistro: "2026-04-11T12:00:00Z", idEstudiante: 4 },
+  // Sin perfil completo: no se puede etiquetar.
+  { idUsuario: 32, nombre: "Nico", apellido: "Vera", email: "nico@utn.edu.ar", rol: "estudiante", activo: true, fechaRegistro: "2026-04-12T12:00:00Z", idEstudiante: null },
+];
+
+const PROYECTOS = [
+  proyectoDe({ idProyecto: 2, titulo: "Turnos del club", estado: "publicado" }),
+  proyectoDe({ idProyecto: 9, titulo: "Borrador interno", estado: "borrador" }),
+];
+
 function montar() {
+  const usuarios = vi
+    .spyOn(api.admin, "usuarios")
+    .mockResolvedValue({ items: ESTUDIANTES, total: ESTUDIANTES.length, pagina: 1, tamano: 100 });
+  vi.spyOn(api.admin, "proyectos").mockResolvedValue(PROYECTOS);
   const configuraciones = vi.spyOn(api.matching, "configuraciones").mockResolvedValue(CONFIGURACIONES);
   const referencia = vi.spyOn(api.matching, "referencia").mockResolvedValue(REFERENCIA);
   const evaluaciones = vi.spyOn(api.matching, "evaluaciones").mockResolvedValue([EVALUACION]);
@@ -40,7 +57,7 @@ function montar() {
       <MotorAdminPage />
     </ToastProvider>,
   );
-  return { configuraciones, referencia, evaluaciones, persona };
+  return { configuraciones, referencia, evaluaciones, usuarios, persona };
 }
 
 const tarjeta = (nombre: string) => within(screen.getByRole("heading", { name: nombre }).closest("article") as HTMLElement);
@@ -115,17 +132,30 @@ describe("MotorAdminPage", () => {
       expect(screen.getByText("2 pares etiquetados: 1 como buen match y 1 como mal match.")).toBeInTheDocument();
     });
 
-    it("etiqueta un par nuevo (upsert) después de validar los números", async () => {
+    it("ofrece solo los estudiantes con perfil y los proyectos que puntúa el motor (sin borradores)", async () => {
+      const { usuarios } = await abrir();
+      expect(usuarios).toHaveBeenCalledWith({ rol: "estudiante", tamano: 100 }, expect.anything());
+      const estudiante = await screen.findByLabelText(/^Estudiante/);
+      await within(estudiante).findByRole("option", { name: "Pérez, Ana (ana@utn.edu.ar)" });
+      expect(within(estudiante).getByRole("option", { name: "Sosa, Marta (marta@utn.edu.ar)" })).toBeInTheDocument();
+      expect(within(estudiante).queryByRole("option", { name: /Vera/ })).not.toBeInTheDocument();
+      const proyecto = screen.getByLabelText(/^Proyecto/);
+      expect(within(proyecto).getByRole("option", { name: "Turnos del club (N.º 2)" })).toBeInTheDocument();
+      expect(within(proyecto).queryByRole("option", { name: /Borrador interno/ })).not.toBeInTheDocument();
+    });
+
+    it("etiqueta un par nuevo (upsert) después de validar que se eligió estudiante y proyecto", async () => {
       const { referencia, persona } = await abrir();
       const guardar = vi.spyOn(api.matching, "guardarReferencia").mockResolvedValue({ ...REFERENCIA[1], idMatchReferencia: 3 });
 
       await persona.click(screen.getByRole("button", { name: "Guardar etiqueta" }));
       expect(guardar).not.toHaveBeenCalled();
-      expect(screen.getByText("Ingresá el número de perfil del estudiante.")).toBeInTheDocument();
-      expect(screen.getByText("Ingresá el número del proyecto.")).toBeInTheDocument();
+      expect(screen.getByText("Elegí el estudiante.")).toBeInTheDocument();
+      expect(screen.getByText("Elegí el proyecto.")).toBeInTheDocument();
 
-      await persona.type(screen.getByLabelText(/N\.º de estudiante/), "4");
-      await persona.type(screen.getByLabelText(/N\.º de proyecto/), "2");
+      await within(screen.getByLabelText(/^Estudiante/)).findByRole("option", { name: /Sosa/ });
+      await persona.selectOptions(screen.getByLabelText(/^Estudiante/), "4");
+      await persona.selectOptions(screen.getByLabelText(/^Proyecto/), "2");
       await persona.selectOptions(screen.getByLabelText("Etiqueta"), "no");
       await persona.type(screen.getByLabelText(/Observación/), "No le dan las horas.");
       await persona.click(screen.getByRole("button", { name: "Guardar etiqueta" }));
@@ -133,7 +163,7 @@ describe("MotorAdminPage", () => {
       expect(guardar).toHaveBeenCalledWith({ idEstudiante: 4, idProyecto: 2, esRelevante: false, observacion: "No le dan las horas." });
       expect(await screen.findByText("Conjunto de referencia actualizado")).toBeInTheDocument();
       expect(referencia).toHaveBeenCalledTimes(2);
-      expect(screen.getByLabelText(/N\.º de estudiante/)).toHaveValue(null);
+      expect(screen.getByLabelText(/^Estudiante/)).toHaveValue("");
     });
 
     it("si el servidor rechaza el par, muestra su mensaje en el formulario", async () => {
@@ -141,8 +171,9 @@ describe("MotorAdminPage", () => {
       vi.spyOn(api.matching, "guardarReferencia").mockRejectedValue(
         new ApiError({ statusCode: 404, error: "Not Found", message: "El estudiante no existe." }),
       );
-      await persona.type(screen.getByLabelText(/N\.º de estudiante/), "99");
-      await persona.type(screen.getByLabelText(/N\.º de proyecto/), "2");
+      await within(screen.getByLabelText(/^Estudiante/)).findByRole("option", { name: /Pérez/ });
+      await persona.selectOptions(screen.getByLabelText(/^Estudiante/), "1");
+      await persona.selectOptions(screen.getByLabelText(/^Proyecto/), "2");
       await persona.click(screen.getByRole("button", { name: "Guardar etiqueta" }));
       expect(await screen.findByText("El estudiante no existe.")).toBeInTheDocument();
     });

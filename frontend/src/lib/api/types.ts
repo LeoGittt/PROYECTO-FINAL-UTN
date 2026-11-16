@@ -553,6 +553,8 @@ export interface UsuarioAdmin {
   rol: Rol;
   activo: boolean;
   fechaRegistro: string;
+  /** Número del perfil de estudiante; `null` si no es estudiante o no completó el perfil. */
+  idEstudiante: number | null;
 }
 
 export interface UsuariosAdminFiltros extends ParametrosPagina {

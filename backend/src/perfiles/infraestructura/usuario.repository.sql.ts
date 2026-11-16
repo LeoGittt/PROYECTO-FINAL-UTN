@@ -153,8 +153,11 @@ export class UsuarioRepositorySql implements UsuarioRepository {
       params,
     );
     const { rows: items } = await this.db.query<UsuarioListadoDto>(
-      `SELECT u.id_usuario, u.nombre, u.apellido, u.email, u.rol, u.activo, u.fecha_registro
-         FROM usuario u ${where}
+      `SELECT u.id_usuario, u.nombre, u.apellido, u.email, u.rol, u.activo, u.fecha_registro,
+              pe.id_estudiante
+         FROM usuario u
+         LEFT JOIN perfil_estudiante pe ON pe.id_usuario = u.id_usuario
+         ${where}
         ORDER BY u.fecha_registro DESC, u.id_usuario DESC
         LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, paginacion.tamano, paginacion.desplazamiento],

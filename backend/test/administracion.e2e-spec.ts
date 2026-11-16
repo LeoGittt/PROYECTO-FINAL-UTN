@@ -62,7 +62,7 @@ describe('Administración y reportes (e2e)', () => {
       expect(todos).toMatchObject({ pagina: 1, tamano: 5, total: expect.any(Number) });
       expect(todos.items).toHaveLength(5);
       expect(Object.keys(todos.items[0]).sort()).toEqual(
-        ['activo', 'apellido', 'email', 'fechaRegistro', 'idUsuario', 'nombre', 'rol'].sort(),
+        ['activo', 'apellido', 'email', 'fechaRegistro', 'idEstudiante', 'idUsuario', 'nombre', 'rol'].sort(),
       );
 
       const estudiantes = (await t.http().get('/api/admin/usuarios?rol=estudiante&tamano=100').set(admin).expect(200))
@@ -77,6 +77,16 @@ describe('Administración y reportes (e2e)', () => {
 
       const inactivos = (await t.http().get('/api/admin/usuarios?activo=false&tamano=100').set(admin).expect(200)).body;
       expect(inactivos.items.every((u: { activo: boolean }) => !u.activo)).toBe(true);
+    });
+
+    it('trae el número de perfil (idEstudiante) solo de los estudiantes que lo completaron', async () => {
+      const conPerfil = await crearEstudiante(t.http);
+      const sinPerfil = await registrarUsuario(t.http(), 'estudiante');
+      const renglon = async (email: string) =>
+        (await t.http().get(`/api/admin/usuarios?q=${encodeURIComponent(email)}`).set(admin).expect(200)).body.items[0];
+      expect((await renglon(conPerfil.email)).idEstudiante).toBe(conPerfil.idEstudiante);
+      expect((await renglon(sinPerfil.email)).idEstudiante).toBeNull();
+      expect((await renglon(USUARIOS_SEMILLA.empresa)).idEstudiante).toBeNull();
     });
 
     it('valida los filtros (400)', async () => {

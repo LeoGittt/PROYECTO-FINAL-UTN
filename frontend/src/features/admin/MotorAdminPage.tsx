@@ -173,8 +173,8 @@ const ORDEN_REFERENCIA = ["idEstudiante", "idProyecto", "esRelevante", "observac
 
 function validarReferencia(v: ValoresReferencia): Errores<keyof ValoresReferencia> {
   const errores: Errores<keyof ValoresReferencia> = {};
-  if (!esEnteroPositivo(v.idEstudiante)) errores.idEstudiante = "Ingresá el número de perfil del estudiante.";
-  if (!esEnteroPositivo(v.idProyecto)) errores.idProyecto = "Ingresá el número del proyecto.";
+  if (!v.idEstudiante) errores.idEstudiante = "Elegí el estudiante.";
+  if (!v.idProyecto) errores.idProyecto = "Elegí el proyecto.";
   if (v.observacion.trim().length > 300) errores.observacion = "La observación no puede superar los 300 caracteres.";
   return errores;
 }
@@ -188,6 +188,19 @@ function Referencia() {
   const consulta = useApiQuery("matching:referencia", (signal) => api.matching.referencia({ signal }), {
     esVacio: (lista) => lista.length === 0,
   });
+  // Opciones del formulario: los estudiantes con perfil (hasta 100, el máximo de una página) y los
+  // proyectos que puntúa el motor, es decir, todos menos los borradores.
+  const estudiantes = useApiQuery("admin:estudiantes", (signal) =>
+    api.admin.usuarios({ rol: "estudiante", tamano: 100 }, { signal }),
+  );
+  const proyectos = useApiQuery("admin:proyectos-evaluables", (signal) => api.admin.proyectos(undefined, { signal }));
+  const opcionesEstudiante = (estudiantes.data?.items ?? [])
+    .filter((u) => u.idEstudiante !== null)
+    .sort((a, b) => `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`, "es"))
+    .map((u) => ({ valor: String(u.idEstudiante), etiqueta: `${u.apellido}, ${u.nombre} (${u.email})` }));
+  const opcionesProyecto = (proyectos.data ?? [])
+    .filter((p) => p.estado !== "borrador")
+    .map((p) => ({ valor: String(p.idProyecto), etiqueta: `${p.titulo} (N.º ${p.idProyecto})` }));
   const { errores, errorGeneral, enviando, formulario, alEnviar } = useFormularioPerfil({
     valores,
     validar: validarReferencia,
@@ -243,28 +256,26 @@ function Referencia() {
         <form ref={formulario} onSubmit={alEnviar} noValidate className="mt-4 flex flex-col gap-4">
           {errorGeneral && <Alert variante="danger">{errorGeneral}</Alert>}
           <div className="grid gap-4 sm:grid-cols-3">
-            <Input
+            <Select
               name="idEstudiante"
-              label="N.º de estudiante"
-              hint="El número de perfil, no el de usuario."
-              type="number"
-              min={1}
-              step={1}
+              label="Estudiante"
+              hint="Solo los que completaron su perfil."
+              placeholder={estudiantes.estado === "cargando" ? "Cargando…" : "Elegí un estudiante"}
+              opciones={opcionesEstudiante}
               required
               value={valores.idEstudiante}
-              error={errores.idEstudiante}
+              error={errores.idEstudiante ?? (estudiantes.estado === "error" ? "No pudimos cargar los estudiantes." : undefined)}
               onChange={cambiar("idEstudiante")}
             />
-            <Input
+            <Select
               name="idProyecto"
-              label="N.º de proyecto"
-              hint="Figura en Moderar proyectos."
-              type="number"
-              min={1}
-              step={1}
+              label="Proyecto"
+              hint="Los borradores no se evalúan."
+              placeholder={proyectos.estado === "cargando" ? "Cargando…" : "Elegí un proyecto"}
+              opciones={opcionesProyecto}
               required
               value={valores.idProyecto}
-              error={errores.idProyecto}
+              error={errores.idProyecto ?? (proyectos.estado === "error" ? "No pudimos cargar los proyectos." : undefined)}
               onChange={cambiar("idProyecto")}
             />
             <Select

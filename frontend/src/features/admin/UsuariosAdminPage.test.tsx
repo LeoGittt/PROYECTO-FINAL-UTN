@@ -12,9 +12,9 @@ const { sesion } = vi.hoisted(() => ({ sesion: { usuario: null as unknown } }));
 vi.mock("@/lib/auth/AuthProvider", () => ({ useAuth: () => sesion }));
 
 const USUARIOS: UsuarioAdmin[] = [
-  { idUsuario: 20, nombre: "Carla", apellido: "Gómez", email: "carla@utn.edu.ar", rol: "administrador", activo: true, fechaRegistro: "2026-03-01T12:00:00Z" },
-  { idUsuario: 7, nombre: "Ana", apellido: "Pérez", email: "ana@utn.edu.ar", rol: "estudiante", activo: true, fechaRegistro: "2026-04-10T12:00:00Z" },
-  { idUsuario: 8, nombre: "Pedro", apellido: "Ruiz", email: "pedro@acme.com", rol: "empresa", activo: false, fechaRegistro: "2026-05-20T12:00:00Z" },
+  { idUsuario: 20, nombre: "Carla", apellido: "Gómez", email: "carla@utn.edu.ar", rol: "administrador", activo: true, fechaRegistro: "2026-03-01T12:00:00Z", idEstudiante: null },
+  { idUsuario: 7, nombre: "Ana", apellido: "Pérez", email: "ana@utn.edu.ar", rol: "estudiante", activo: true, fechaRegistro: "2026-04-10T12:00:00Z", idEstudiante: 4 },
+  { idUsuario: 8, nombre: "Pedro", apellido: "Ruiz", email: "pedro@acme.com", rol: "empresa", activo: false, fechaRegistro: "2026-05-20T12:00:00Z", idEstudiante: null },
 ];
 
 function montar(total = USUARIOS.length) {

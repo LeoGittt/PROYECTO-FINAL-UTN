@@ -27,6 +27,8 @@ export interface UsuarioListadoDto {
   rol: Rol;
   activo: boolean;
   fechaRegistro: string;
+  /** Número del perfil de estudiante; `null` si no es estudiante o todavía no completó el perfil. */
+  idEstudiante: number | null;
 }
 
 /** Solo para autenticar: incluye el hash, que nunca sale de M1. */
