@@ -127,15 +127,15 @@ El backend guarda en `match` el puntaje de cada estudiante activo con cada proye
 | Método y ruta | Quién | Descripción |
 |---|---|---|
 | `GET /matching/configuraciones` | admin | `[{ idConfiguracion, nombre, descripcion, pesoTecnologias, pesoTexto, pesoContexto, umbralRecomendacion, activa }]` |
-| `POST /matching/configuraciones/:id/activar` | admin | Activa la configuración y recalcula todos los puntajes. Devuelve `{ pares, milisegundos }` |
+| `POST /matching/configuraciones/:id/activar` | admin | Activa la configuración (queda como única activa) y recalcula todos los puntajes con ella. Devuelve `{ pares, milisegundos }`. 404 si no existe |
 | `POST /matching/recalcular` | admin | Recalcula todos los pares con la configuración activa |
-| `GET /matching/referencia` | admin | `[{ idMatchReferencia, idEstudiante, estudiante, idProyecto, proyecto, esRelevante, observacion }]` |
-| `PUT /matching/referencia` | admin | `{ idEstudiante, idProyecto, esRelevante, observacion? }` (upsert) |
-| `DELETE /matching/referencia/:id` | admin | 204 |
-| `POST /matching/evaluaciones` | admin | `{ idConfiguracion, k? }` (k por defecto 5). Calcula en memoria con esa configuración, guarda y devuelve la evaluación |
+| `GET /matching/referencia` | admin | `[{ idMatchReferencia, idEstudiante, estudiante, idProyecto, proyecto, esRelevante, observacion }]`, el más nuevo primero. `estudiante` es "Nombre Apellido" y `proyecto`, el título |
+| `PUT /matching/referencia` | admin | `{ idEstudiante, idProyecto, esRelevante, observacion? }` (upsert: un par se etiqueta una sola vez). 200 con el par. 404 si el estudiante o el proyecto no existen |
+| `DELETE /matching/referencia/:id` | admin | 204. 404 si no existe |
+| `POST /matching/evaluaciones` | admin | `{ idConfiguracion, k? }` (k de 1 a 50, por defecto 5). Calcula en memoria con esa configuración (aunque no sea la activa), guarda y devuelve la evaluación (201). 404 si la configuración no existe, 422 si el conjunto de referencia está vacío |
 | `GET /matching/evaluaciones` | admin | Historial, la más reciente primero |
 
-`Evaluacion`: `{ idEvaluacion, idConfiguracion, configuracion, fechaEjecucion, k, cantidadEstudiantes, precisionGlobal, recallGlobal, precisionTopK, observaciones }`. Las tres métricas se calculan **solo sobre pares etiquetados** en `match_referencia`, como define `schema.sql`.
+`Evaluacion`: `{ idEvaluacion, idConfiguracion, configuracion, fechaEjecucion, k, cantidadEstudiantes, precisionGlobal, recallGlobal, precisionTopK, observaciones }`. Las tres métricas se calculan **solo sobre pares etiquetados** en `match_referencia`, como define `schema.sql`. Un proyecto (que no sea borrador) está recomendado a un estudiante si su puntaje alcanza el umbral de la configuración, y el top-k de un estudiante son sus k recomendados de mayor puntaje. `precisionGlobal` = recomendados relevantes / recomendados etiquetados; `recallGlobal` = recomendados relevantes / relevantes etiquetados; `precisionTopK` = promedio, entre los estudiantes con algún par etiquetado en su top-k, de la proporción de relevantes entre esos pares. Una división por cero vale 0; las métricas se redondean a 4 decimales.
 
 ### 5.4 Postulaciones
 

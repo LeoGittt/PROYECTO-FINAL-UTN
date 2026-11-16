@@ -5,9 +5,12 @@ import { ProyectosModule } from '../proyectos/proyectos.module.js';
 import {
   InvitacionesController,
   MatchingController,
+  MotorController,
   PostulacionesController,
   PostulacionesDeProyectoController,
 } from './matching.controller.js';
+import { EvaluacionRepository } from './evaluacion.repository.js';
+import { EvaluacionService } from './evaluacion.service.js';
 import { MatchingRepository } from './matching.repository.js';
 import { MatchingService } from './matching.service.js';
 import { PostulacionesRepository } from './postulaciones.repository.js';
@@ -24,8 +27,16 @@ import { PostulacionesService } from './postulaciones.service.js';
     PostulacionesController,
     InvitacionesController,
     PostulacionesDeProyectoController,
+    MotorController,
   ],
-  providers: [MatchingRepository, PostulacionesRepository, MatchingService, PostulacionesService],
-  exports: [MatchingService, PostulacionesService],
+  providers: [
+    MatchingRepository,
+    PostulacionesRepository,
+    EvaluacionRepository,
+    MatchingService,
+    PostulacionesService,
+    EvaluacionService,
+  ],
+  exports: [MatchingService, PostulacionesService, EvaluacionService],
 })
 export class MatchingModule {}

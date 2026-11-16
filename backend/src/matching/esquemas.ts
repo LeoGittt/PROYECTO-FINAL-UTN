@@ -24,3 +24,16 @@ export class CrearInvitacionDto extends crearDto(
 ) {}
 
 export class ResponderInvitacionDto extends crearDto(z.object({ aceptar: z.boolean() })) {}
+
+export class GuardarReferenciaDto extends crearDto(
+  z.object({
+    idEstudiante: idEsquema,
+    idProyecto: idEsquema,
+    esRelevante: z.boolean(),
+    observacion: textoOpcional(300),
+  }),
+) {}
+
+export class CrearEvaluacionDto extends crearDto(
+  z.object({ idConfiguracion: idEsquema, k: z.number().int().min(1).max(50).default(5) }),
+) {}

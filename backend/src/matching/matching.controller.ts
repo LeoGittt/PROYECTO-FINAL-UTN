@@ -1,15 +1,19 @@
-import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import type { UsuarioAutenticado } from '../compartido/dominio/seguridad.js';
 import { ParseIdPipe } from '../compartido/infraestructura/http/validacion.js';
 import { Roles, UsuarioActual } from '../compartido/infraestructura/seguridad/decoradores.js';
 import {
   CambiarEstadoPostulacionDto,
+  CrearEvaluacionDto,
   CrearInvitacionDto,
   CrearPostulacionDto,
+  GuardarReferenciaDto,
   EstadoPostulacionQuery,
   LimiteQuery,
   ResponderInvitacionDto,
 } from './esquemas.js';
+import type { ConfiguracionDto, EvaluacionDto } from './evaluacion.repository.js';
+import { EvaluacionService, type ReferenciaDto } from './evaluacion.service.js';
 import {
   MatchingService,
   type RecomendacionEstudianteDto,
@@ -142,5 +146,58 @@ export class PostulacionesDeProyectoController {
     @UsuarioActual() usuario: UsuarioAutenticado,
   ): Promise<InvitacionDto[]> {
     return this.postulaciones.listarInvitacionesDeProyecto(idProyecto, usuario);
+  }
+}
+
+/** Administración y evaluación del motor (docs/api/CONTRATO.md, sección 5.3). Solo el administrador. */
+@Controller('matching')
+@Roles('administrador')
+export class MotorController {
+  constructor(private readonly evaluacion: EvaluacionService) {}
+
+  @Get('configuraciones')
+  configuraciones(): Promise<ConfiguracionDto[]> {
+    return this.evaluacion.listarConfiguraciones();
+  }
+
+  @Post('configuraciones/:id/activar')
+  @HttpCode(200)
+  activar(@Param('id', ParseIdPipe) id: number): Promise<{ pares: number; milisegundos: number }> {
+    return this.evaluacion.activar(id);
+  }
+
+  @Post('recalcular')
+  @HttpCode(200)
+  recalcular(): Promise<{ pares: number; milisegundos: number }> {
+    return this.evaluacion.recalcular();
+  }
+
+  @Get('referencia')
+  referencia(): Promise<ReferenciaDto[]> {
+    return this.evaluacion.listarReferencia();
+  }
+
+  @Put('referencia')
+  guardarReferencia(
+    @Body() datos: GuardarReferenciaDto,
+    @UsuarioActual() admin: UsuarioAutenticado,
+  ): Promise<ReferenciaDto> {
+    return this.evaluacion.guardarReferencia(datos, admin);
+  }
+
+  @Delete('referencia/:id')
+  @HttpCode(204)
+  borrarReferencia(@Param('id', ParseIdPipe) id: number): Promise<void> {
+    return this.evaluacion.borrarReferencia(id);
+  }
+
+  @Post('evaluaciones')
+  evaluar(@Body() datos: CrearEvaluacionDto): Promise<EvaluacionDto> {
+    return this.evaluacion.evaluar(datos.idConfiguracion, datos.k);
+  }
+
+  @Get('evaluaciones')
+  evaluaciones(): Promise<EvaluacionDto[]> {
+    return this.evaluacion.listarEvaluaciones();
   }
 }
