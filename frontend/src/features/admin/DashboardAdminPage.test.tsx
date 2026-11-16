@@ -90,6 +90,22 @@ describe("DashboardAdminPage", () => {
     expect(itemDe("Tecnologías más demandadas", "React")).toHaveTextContent("8 proyectos · 6 como obligatoria");
   });
 
+  it("evolución mensual: los meses sin proyectos también son columnas, para no saltear meses", async () => {
+    montar({
+      ...DASHBOARD,
+      tecnologiasDemandadas: {
+        ...DASHBOARD.tecnologiasDemandadas,
+        evolucion: [
+          { mes: "2026-06-01", tecnologia: "React", cantidadProyectos: 1 },
+          { mes: "2026-08-01", tecnologia: "React", cantidadProyectos: 2 },
+        ],
+      },
+    });
+    const tabla = await screen.findByRole("table", { name: "Proyectos publicados por mes que piden cada tecnología" });
+    expect(within(tabla).getAllByRole("columnheader")).toHaveLength(4);
+    expect(celdas(filaDe("Proyectos publicados por mes que piden cada tecnología", "React"))).toEqual(["1", "0", "2"]);
+  });
+
   it("evolución mensual: una tabla por tecnología y mes, con 0 donde no hubo proyectos", async () => {
     montar();
     const tabla = await screen.findByRole("table", { name: "Proyectos publicados por mes que piden cada tecnología" });

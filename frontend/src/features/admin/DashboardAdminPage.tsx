@@ -167,11 +167,31 @@ function Resumen({ datos }: { datos: ResumenReportes }) {
   );
 }
 
+/** Todos los meses ("2026-06", "2026-07", …) entre el primero y el último de la lista. */
+function mesesSeguidos(meses: string[]): string[] {
+  if (meses.length === 0) return [];
+  const ordenados = [...meses].sort();
+  let [anio, mes] = ordenados[0].split("-").map(Number);
+  const ultimo = ordenados[ordenados.length - 1];
+  const resultado: string[] = [];
+  for (;;) {
+    const actual = `${anio}-${String(mes).padStart(2, "0")}`;
+    resultado.push(actual);
+    if (actual >= ultimo) return resultado;
+    mes += 1;
+    if (mes > 12) {
+      mes = 1;
+      anio += 1;
+    }
+  }
+}
+
 function Metricas({ datos }: { datos: Dashboard }) {
   const ranking = [...datos.tecnologiasDemandadas.ranking].sort((a, b) => b.cantidadProyectos - a.cantidadProyectos);
   const evolucion = datos.tecnologiasDemandadas.evolucion;
-  // Columnas: los últimos 12 meses con datos ("2026-09"); filas: las 5 tecnologías más pedidas.
-  const meses = [...new Set(evolucion.map((e) => e.mes.slice(0, 7)))].sort().slice(-12);
+  // Columnas: los últimos 12 meses, seguidos ("2026-09"), aunque alguno no tenga proyectos;
+  // filas: las 5 tecnologías más pedidas.
+  const meses = mesesSeguidos(evolucion.map((e) => e.mes.slice(0, 7))).slice(-12);
   const tecnologias = ranking.slice(0, 5).map((r) => r.tecnologia);
   const proyectosEn = (tecnologia: string, mes: string) =>
     evolucion
