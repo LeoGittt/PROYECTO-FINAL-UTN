@@ -98,6 +98,7 @@ describe("GestionProyectoPage", () => {
     await persona.click(await screen.findByRole("tab", { name: "Recomendados" }));
     expect(screen.getByText("Las recomendaciones son para proyectos publicados")).toBeInTheDocument();
     expect(recomendados).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Cancelar" })).not.toBeInTheDocument();
 
     await persona.click(screen.getByRole("button", { name: "Publicar" }));
     await persona.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Sí, publicar" }));

@@ -23,10 +23,8 @@ import { valoresDesdeProyecto } from "./valores";
 
 /** Lo que puede hacer el dueño en cada estado (contrato 4). Publicar va por su propia ruta. */
 const ACCIONES: Partial<Record<EstadoProyecto, { estado: EstadoProyecto; texto: string; confirmacion: string }[]>> = {
-  borrador: [
-    { estado: "publicado", texto: "Publicar", confirmacion: "Los estudiantes lo van a poder ver y postularse." },
-    { estado: "cancelado", texto: "Cancelar", confirmacion: "El borrador queda cancelado y no se puede publicar." },
-  ],
+  // Un borrador no se cancela (contrato 4): si no se publica, solo lo ve su dueño.
+  borrador: [{ estado: "publicado", texto: "Publicar", confirmacion: "Los estudiantes lo van a poder ver y postularse." }],
   publicado: [
     { estado: "en_curso", texto: "Pasar a en curso", confirmacion: "Deja de recibir postulaciones e invitaciones." },
     { estado: "cancelado", texto: "Cancelar", confirmacion: "Deja de recibir postulaciones y no se puede reabrir." },

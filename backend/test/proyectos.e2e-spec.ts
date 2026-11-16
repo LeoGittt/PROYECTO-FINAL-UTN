@@ -147,16 +147,19 @@ describe('Proyectos (e2e)', () => {
       await cambiar('cancelado').expect(409);
     });
 
-    it('un borrador se puede cancelar (y queda con fecha de cierre)', async () => {
+    it('un borrador no se cancela (409): sigue siendo borrador y nadie más lo ve', async () => {
+      // La base exige fecha de publicación fuera del borrador: cancelarlo lo haría pasar por publicado.
       const { idProyecto } = await crearProyecto(t.http(), empresa.token, { publicar: false });
-      const cancelado = await t
+      const respuesta = await t
         .http()
         .patch(`/api/proyectos/${idProyecto}/estado`)
         .set(conSesion(empresa.token))
         .send({ estado: 'cancelado' })
-        .expect(200);
-      expect(cancelado.body.estado).toBe('cancelado');
-      expect(cancelado.body.fechaCierre).not.toBeNull();
+        .expect(409);
+      expect(respuesta.body.message).toBe('Un proyecto borrador no puede pasar a cancelado');
+      const propio = await t.http().get(`/api/proyectos/${idProyecto}`).set(conSesion(empresa.token)).expect(200);
+      expect(propio.body).toMatchObject({ estado: 'borrador', fechaPublicacion: null, fechaCierre: null });
+      await t.http().get(`/api/proyectos/${idProyecto}`).set(conSesion(estudiante.token)).expect(404);
     });
 
     it('avisa con eventos al publicar, editar y cambiar de estado', async () => {
@@ -275,6 +278,13 @@ describe('Proyectos (e2e)', () => {
       await t.http().get('/api/proyectos/abc').set(conSesion(estudiante.token)).expect(400);
       await t.http().get('/api/proyectos/999999').set(conSesion(estudiante.token)).expect(404);
       await t.http().put('/api/proyectos/999999').set(conSesion(empresa.token)).send(cuerpoProyecto()).expect(404);
+    });
+
+    it('valores fuera de rango en la búsqueda son 400, no un error del servidor', async () => {
+      const buscar = (query: string) => t.http().get(`/api/proyectos?${query}`).set(conSesion(estudiante.token));
+      await buscar('tecnologias=99999999999999999999').expect(400);
+      await buscar('pagina=200000000').expect(400);
+      await buscar('pagina=10000').expect(200);
     });
   });
 

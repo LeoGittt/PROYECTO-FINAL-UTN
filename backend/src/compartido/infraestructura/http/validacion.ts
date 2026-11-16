@@ -85,6 +85,6 @@ export class ParseIdPipe implements PipeTransform<string, number> {
 
 /** Esquema de los parámetros `?pagina=1&tamano=20` (CONTRATO.md, sección 1). */
 export const paginacionEsquema = z.object({
-  pagina: z.coerce.number().int().min(1).default(1),
+  pagina: z.coerce.number().int().min(1).max(10_000).default(1),
   tamano: z.coerce.number().int().min(1).max(100).default(20),
 });

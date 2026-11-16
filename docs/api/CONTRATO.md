@@ -11,7 +11,7 @@ Los nombres de campos siguen el modelo de datos ([DER.md](../entrega-2/DER.md)),
 - Autenticación: `Authorization: Bearer <jwt>`. El JWT (HS256) lleva `sub` (el idUsuario, **como texto**, según el estándar JWT) y `rol`. Vence a las 12 horas. El servidor no confía en el `rol` del token: usa el actual de la base, y un usuario desactivado pierde la sesión de inmediato (401).
 - Roles: `estudiante`, `empresa`, `docente`, `administrador`. "Publicador" es `empresa` o `docente`.
 - Errores: `{ "statusCode": 400, "error": "Bad Request", "message": "texto para el usuario", "details": [{ "campo": "email", "mensaje": "..." }] }`. Códigos usados: 400 (validación, también un JSON mal formado), 401 (sin sesión o credenciales inválidas), 403 (sin permiso), 404, 409 (conflicto: duplicado o transición inválida), 413 (cuerpo demasiado grande), 422 (regla de negocio) y 429 (demasiados pedidos: `/auth/registro` y `/auth/login` admiten 20 por minuto por IP y por endpoint, configurable). Un error inesperado responde 500 con un mensaje genérico, sin detalles internos. `details` aparece en 400 (un renglón por campo inválido), en 422 (uno por regla violada) y en algunos 409 (el campo que choca).
-- Listas paginadas: `?pagina=1&tamano=20` y respuesta `{ "items": [], "total": 0, "pagina": 1, "tamano": 20 }`. Las demás listas devuelven un arreglo.
+- Listas paginadas: `?pagina=1&tamano=20` (`pagina` de 1 a 10000, `tamano` de 1 a 100) y respuesta `{ "items": [], "total": 0, "pagina": 1, "tamano": 20 }`. Las demás listas devuelven un arreglo.
 - Los mensajes de error están en español y se pueden mostrar tal cual.
 
 ## 2. Autenticación y perfiles (M1)
@@ -83,7 +83,7 @@ En el `PUT`, `tecnologias` es `[{ idTecnologia, nivel }]` (`nivel`: `basico`, `i
 | `GET /proyectos/:id` | autenticado | Un proyecto publicado lo ve cualquiera. Un borrador o suspendido solo su dueño y el admin (404 para el resto) |
 | `PUT /proyectos/:id` | dueño | Edita los mismos campos que el alta (reemplaza tecnologías y habilidades). No se edita si el estado es `finalizado`, `cancelado` o `suspendido` (409). Otro publicador recibe 403 |
 | `POST /proyectos/:id/publicar` | dueño | `borrador` → `publicado`. 200 con el proyecto; 409 si no estaba en borrador |
-| `PATCH /proyectos/:id/estado` | dueño | `{ estado }`. Transiciones válidas: `borrador` → `cancelado`; `publicado` → `en_curso` o `cancelado`; `en_curso` → `finalizado` o `cancelado`. Cualquier otra da 409. `finalizado` y `cancelado` fijan `fechaCierre`. 200 con el proyecto |
+| `PATCH /proyectos/:id/estado` | dueño | `{ estado }`. Transiciones válidas: `publicado` → `en_curso` o `cancelado`; `en_curso` → `finalizado` o `cancelado`. Cualquier otra da 409 (un borrador no se cancela: sigue siendo borrador y solo lo ve su dueño). `finalizado` y `cancelado` fijan `fechaCierre`. 200 con el proyecto |
 | `POST /proyectos/:id/duplicar` | dueño | (deseable) crea un borrador copia |
 | `GET /proyectos` | autenticado | Búsqueda de proyectos `publicado`. Filtros: `q` (título y descripción), `tecnologias=1,2` (al menos una), `modalidad`, `tipoRetribucion`, `horasMax`, `anioMax` (año mínimo del proyecto menor o igual). Paginada |
 

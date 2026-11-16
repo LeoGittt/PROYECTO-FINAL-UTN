@@ -62,10 +62,10 @@ export class ProyectosPropiosQuery extends crearDto(
   z.object({ estado: z.enum(ESTADOS_PROYECTO).optional() }),
 ) {}
 
-/** `tecnologias=1,2` llega como texto: se lo convierte en una lista de identificadores. */
+/** `tecnologias=1,2` llega como texto: se lo convierte en una lista de identificadores (hasta 15 dígitos cada uno). */
 const listaDeIds = z
   .string()
-  .regex(/^\d+(,\d+)*$/, 'Debe ser una lista de identificadores separados por comas')
+  .regex(/^\d{1,15}(,\d{1,15})*$/, 'Debe ser una lista de identificadores separados por comas')
   .transform((texto) => texto.split(',').map(Number));
 
 export const busquedaEsquema = paginacionEsquema.extend({

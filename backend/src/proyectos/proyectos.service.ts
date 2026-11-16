@@ -52,10 +52,10 @@ export interface DatosDeMatching {
 
 /**
  * Cambios de estado que hace el dueño con `PATCH /proyectos/:id/estado`. Publicar tiene su
- * propia ruta y suspender o reactivar son del administrador.
+ * propia ruta y suspender o reactivar son del administrador. Un borrador no se cancela: la base
+ * exige fecha de publicación fuera del borrador, así que contaría como publicado.
  */
 const TRANSICIONES_DEL_DUENO: Partial<Record<EstadoProyecto, EstadoProyecto[]>> = {
-  borrador: ['cancelado'],
   publicado: ['en_curso', 'cancelado'],
   en_curso: ['finalizado', 'cancelado'],
 };
