@@ -17,11 +17,11 @@ const USUARIOS: UsuarioAdmin[] = [
   { idUsuario: 8, nombre: "Pedro", apellido: "Ruiz", email: "pedro@acme.com", rol: "empresa", activo: false, fechaRegistro: "2026-05-20T12:00:00Z", idEstudiante: null },
 ];
 
-function montar(total = USUARIOS.length) {
+function montar(total = USUARIOS.length, items = USUARIOS) {
   sesion.usuario = usuarioDe("administrador");
   const usuarios = vi
     .spyOn(api.admin, "usuarios")
-    .mockImplementation(async (filtros = {}) => ({ items: USUARIOS, total, pagina: filtros.pagina ?? 1, tamano: 20 }));
+    .mockImplementation(async (filtros = {}) => ({ items, total, pagina: filtros.pagina ?? 1, tamano: 20 }));
   const persona = userEvent.setup();
   render(
     <ToastProvider>
@@ -85,6 +85,16 @@ describe("UsuariosAdminPage", () => {
     expect(actualizar).toHaveBeenCalledWith(7, { activo: false });
     expect(await screen.findByText("Ana Pérez ya no puede iniciar sesión.")).toBeInTheDocument();
     expect(usuarios).toHaveBeenCalledTimes(2);
+  });
+
+  it("al desactivar a una empresa o a un docente avisa que sus proyectos se suspenden; a un estudiante, no", async () => {
+    const { persona } = montar(USUARIOS.length, [USUARIOS[1], { ...USUARIOS[2], activo: true }]);
+    await persona.click(await screen.findByRole("button", { name: "Desactivar a Pedro Ruiz" }));
+    expect(dialogo().getByText(/Sus proyectos publicados o en curso se suspenden/)).toBeInTheDocument();
+    await persona.click(dialogo().getByRole("button", { name: "Cancelar" }));
+
+    await persona.click(screen.getByRole("button", { name: "Desactivar a Ana Pérez" }));
+    expect(dialogo().queryByText(/Sus proyectos/)).not.toBeInTheDocument();
   });
 
   it("activa a un usuario inactivo", async () => {

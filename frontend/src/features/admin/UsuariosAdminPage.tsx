@@ -264,7 +264,10 @@ export function UsuariosAdminPage() {
         titulo={aCambiarEstado ? `¿${aCambiarEstado.activo ? "Desactivar" : "Activar"} a ${nombreCompleto(aCambiarEstado)}?` : ""}
         descripcion={
           aCambiarEstado?.activo
-            ? "No va a poder iniciar sesión y pierde la sesión abierta en el momento. Sus datos se conservan."
+            ? "No va a poder iniciar sesión y pierde la sesión abierta en el momento. Sus datos se conservan." +
+              (aCambiarEstado.rol === "empresa" || aCambiarEstado.rol === "docente"
+                ? " Sus proyectos publicados o en curso se suspenden; después los reactivás desde Proyectos."
+                : "")
             : "Va a poder volver a iniciar sesión con su contraseña."
         }
         textoConfirmar={aCambiarEstado?.activo ? "Sí, desactivar" : "Sí, activar"}
