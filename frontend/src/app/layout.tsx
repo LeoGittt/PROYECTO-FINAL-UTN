@@ -52,6 +52,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="es-AR"
       suppressHydrationWarning
+      // Next desactiva el scroll suave al cambiar de página (si no, cada navegación anima el salto).
+      data-scroll-behavior="smooth"
       className={`${display.variable} ${cuerpo.variable} ${mono.variable}`}
     >
       <head>
