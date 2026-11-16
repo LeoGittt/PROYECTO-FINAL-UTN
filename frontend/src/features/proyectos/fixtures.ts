@@ -102,6 +102,7 @@ export const POSTULACION: Postulacion = {
     apellido: "Fernández",
     carrera: "Tecnicatura Universitaria en Programación",
     anioCursada: 2,
+    activo: true,
     tecnologias: [
       { nombre: "React", nivel: "intermedio" },
       { nombre: "Node.js", nivel: "basico" },

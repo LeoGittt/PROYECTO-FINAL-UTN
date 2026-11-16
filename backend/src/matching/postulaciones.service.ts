@@ -34,6 +34,8 @@ export interface PostulacionDto {
     email?: string;
     carrera: string;
     anioCursada: number;
+    /** `false` si la administración desactivó la cuenta del estudiante. */
+    activo: boolean;
     tecnologias: Array<{ nombre: string; nivel: string }>;
   };
   puntajeTotal: number | null;
@@ -374,6 +376,7 @@ export class PostulacionesService implements OnModuleInit {
           ...(verEmail ? { email: estudiante.email } : {}),
           carrera: estudiante.carrera,
           anioCursada: estudiante.anioCursada,
+          activo: estudiante.activo,
           tecnologias: estudiante.tecnologias.map(({ nombre, nivel }) => ({ nombre, nivel })),
         },
         puntajeTotal: puntaje?.puntajeTotal ?? null,

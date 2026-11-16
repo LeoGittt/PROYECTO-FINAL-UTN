@@ -145,7 +145,7 @@ El backend guarda en `match` el puntaje de cada estudiante activo con cada proye
 { "idPostulacion": 1, "estado": "pendiente", "mensajePresentacion": null,
   "fechaPostulacion": "...", "fechaActualizacion": "...",
   "proyecto": { "idProyecto": 1, "titulo": "", "estado": "publicado", "publicador": "Acme SA" },
-  "estudiante": { "idEstudiante": 1, "nombre": "", "apellido": "", "email": "solo para el publicador", "carrera": "", "anioCursada": 2, "tecnologias": [] },
+  "estudiante": { "idEstudiante": 1, "nombre": "", "apellido": "", "email": "solo para el publicador", "carrera": "", "anioCursada": 2, "activo": true, "tecnologias": [] },
   "puntajeTotal": 0.8,
   "historial": [{ "estadoAnterior": null, "estadoNuevo": "pendiente", "fechaCambio": "..." }] }
 ```
@@ -192,7 +192,7 @@ Se generan a partir de los eventos del dominio: `match.nuevo` (al estudiante), `
 | Método y ruta | Quién | Descripción |
 |---|---|---|
 | `GET /admin/usuarios?rol=&activo=&q=&pagina=&tamano=` | admin | `{ items: [{ idUsuario, nombre, apellido, email, rol, activo, fechaRegistro, idEstudiante }], total, pagina, tamano }`. `idEstudiante` es el número del perfil de estudiante (el que usan `/estudiantes/:id` y el conjunto de referencia); `null` si no es estudiante o no completó el perfil |
-| `PATCH /admin/usuarios/:id` | admin | `{ activo?, rol? }` (al menos uno; `rol` es `estudiante`, `empresa` o `docente`) → 200 con el renglón del listado. Un admin no puede desactivarse ni cambiarse el rol a sí mismo (409), y el rol de otro administrador tampoco se cambia (409). El rol solo cambia si el usuario todavía no completó su perfil (409). 404 si no existe. Desactivar corta la sesión del usuario al instante; al reactivar a un estudiante se recalculan sus puntajes |
+| `PATCH /admin/usuarios/:id` | admin | `{ activo?, rol? }` (al menos uno; `rol` es `estudiante`, `empresa` o `docente`) → 200 con el renglón del listado. Un admin no puede desactivarse ni cambiarse el rol a sí mismo (409), y el rol de otro administrador tampoco se cambia (409). El rol solo cambia si el usuario todavía no completó su perfil (409). 404 si no existe. Desactivar corta la sesión del usuario al instante. Desactivar a una empresa o a un docente suspende sus proyectos `publicado` y `en_curso` con el motivo «La cuenta del publicador fue desactivada»; al reactivar la cuenta, los proyectos siguen suspendidos hasta que el admin los reactive. Al reactivar a un estudiante se recalculan sus puntajes. En las postulaciones, `estudiante.activo` es `false` si la cuenta del estudiante está desactivada |
 | `POST /admin/administradores` | admin | `{ nombre, apellido, email, contrasena }` → 201 con el renglón del listado. 409 si el email ya está registrado |
 | `POST /admin/usuarios/:id/restablecer-contrasena` | admin | `{ contrasenaNueva }` (misma política que el registro) → 204. 404 si no existe |
 | `GET /admin/proyectos?estado=` | admin | Todos los proyectos, borradores incluidos, los más nuevos primero, con `cantidadPostulaciones` |

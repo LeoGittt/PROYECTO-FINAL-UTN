@@ -206,6 +206,27 @@ export class ProyectosService {
     return this.obtener(idProyecto, admin);
   }
 
+  /**
+   * Cuando la administración desactiva a un publicador, sus proyectos publicados y en curso se
+   * suspenden: dejan de verse y se avisa a los postulados. Al reactivar la cuenta, el administrador
+   * decide qué proyecto reactivar.
+   */
+  async suspenderDelPublicador(idUsuario: number): Promise<void> {
+    let publicador: PublicadorDto;
+    try {
+      publicador = await this.perfiles.obtenerPublicador(idUsuario);
+    } catch (error) {
+      if (error instanceof ErrorReglaNegocio) return; // sin perfil no tiene proyectos
+      throw error;
+    }
+    const proyectos = await this.armarDtos(await this.repositorio.listarDePublicador(publicador));
+    for (const proyecto of proyectos) {
+      if (proyecto.estado === 'publicado' || proyecto.estado === 'en_curso') {
+        await this.aplicarCambioDeEstado(proyecto, 'suspendido', 'La cuenta del publicador fue desactivada');
+      }
+    }
+  }
+
   /** Un proyecto suspendido vuelve a estar publicado. */
   async reactivar(idProyecto: number, admin: UsuarioAutenticado): Promise<ProyectoDto> {
     const proyecto = await this.obtener(idProyecto, admin);

@@ -41,7 +41,11 @@ export class AdministracionService {
     }
     if (cambios.rol !== undefined) await this.perfiles.cambiarRol(idUsuario, cambios.rol);
     if (cambios.activo === true) await this.perfiles.activarUsuario(idUsuario);
-    if (cambios.activo === false) await this.perfiles.desactivarUsuario(idUsuario);
+    if (cambios.activo === false) {
+      await this.perfiles.desactivarUsuario(idUsuario);
+      const { rol } = await this.usuario(idUsuario);
+      if (rol === 'empresa' || rol === 'docente') await this.proyectos.suspenderDelPublicador(idUsuario);
+    }
     return this.usuario(idUsuario);
   }
 

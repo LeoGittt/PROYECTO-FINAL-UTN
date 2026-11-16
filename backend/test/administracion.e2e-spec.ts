@@ -303,6 +303,50 @@ describe('Administración y reportes (e2e)', () => {
       expect((await notificaciones(publicador))[0].mensaje).toBe(`La administración reactivó «${titulo}».`);
     });
 
+    it('desactivar a un publicador suspende sus proyectos publicados y en curso; reactivarlo no los vuelve a publicar', async () => {
+      const otro = await crearPublicador(t.http);
+      const sesionOtro = conSesion(otro.token);
+      const publicado = await crearProyecto(t.http(), otro.token, { titulo: 'Publicado de una cuenta desactivada' });
+      const enCurso = await crearProyecto(t.http(), otro.token);
+      await t.http().patch(`/api/proyectos/${enCurso.idProyecto}/estado`).set(sesionOtro).send({ estado: 'en_curso' }).expect(200);
+      const borrador = await crearProyecto(t.http(), otro.token, { publicar: false });
+      const estadoDe = async (idProyecto: number) =>
+        ((await t.http().get('/api/admin/proyectos').set(admin).expect(200)).body as Array<{ idProyecto: number; estado: string }>).find(
+          (p) => p.idProyecto === idProyecto,
+        )?.estado;
+
+      await t.http().patch(`/api/admin/usuarios/${otro.idUsuario}`).set(admin).send({ activo: false }).expect(200);
+
+      expect(await estadoDe(publicado.idProyecto)).toBe('suspendido');
+      expect(await estadoDe(enCurso.idProyecto)).toBe('suspendido');
+      expect(await estadoDe(borrador.idProyecto)).toBe('borrador');
+      await t.http().get(`/api/proyectos/${publicado.idProyecto}`).set(estudiante).expect(404);
+      const busqueda = (
+        await t.http().get(`/api/proyectos?q=${encodeURIComponent('Publicado de una cuenta desactivada')}`).set(estudiante).expect(200)
+      ).body;
+      expect(busqueda.items).toHaveLength(0);
+
+      // El administrador decide qué proyecto reactivar, uno por uno.
+      await t.http().patch(`/api/admin/usuarios/${otro.idUsuario}`).set(admin).send({ activo: true }).expect(200);
+      expect(await estadoDe(publicado.idProyecto)).toBe('suspendido');
+    });
+
+    it('en los postulantes de un proyecto se ve si la cuenta del estudiante está desactivada', async () => {
+      const { idProyecto } = await crearProyecto(t.http(), publicador.token);
+      const activa = await crearEstudiante(t.http);
+      const desactivada = await crearEstudiante(t.http);
+      for (const persona of [activa, desactivada]) {
+        await t.http().post('/api/postulaciones').set(conSesion(persona.token)).send({ idProyecto }).expect(201);
+      }
+      await t.http().patch(`/api/admin/usuarios/${desactivada.idUsuario}`).set(admin).send({ activo: false }).expect(200);
+
+      const postulantes = (
+        await t.http().get(`/api/proyectos/${idProyecto}/postulaciones`).set(conSesion(publicador.token)).expect(200)
+      ).body as Array<{ estudiante: { idEstudiante: number; activo: boolean } }>;
+      expect(postulantes.find((p) => p.estudiante.idEstudiante === activa.idEstudiante)?.estudiante.activo).toBe(true);
+      expect(postulantes.find((p) => p.estudiante.idEstudiante === desactivada.idEstudiante)?.estudiante.activo).toBe(false);
+    });
+
     it('no suspende un borrador ni reactiva lo que no está suspendido (409); un proyecto inexistente es 404', async () => {
       const borrador = await crearProyecto(t.http(), publicador.token, { publicar: false });
       await t

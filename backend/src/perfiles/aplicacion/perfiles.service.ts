@@ -197,6 +197,7 @@ export class PerfilesService {
       carrera: carreraPorId.get(r.idCarrera) ?? '',
       anioCursada: r.anioCursada,
       horasSemanales: r.horasSemanales,
+      activo: r.activo,
       tecnologias: r.tecnologias.map((t) => ({
         idTecnologia: t.idTecnologia,
         nombre: nombreTecnologia.get(t.idTecnologia) ?? '',

@@ -146,6 +146,8 @@ export interface EstudianteResumenDto {
   carrera: string;
   anioCursada: number;
   horasSemanales: number;
+  /** `false` si la administración desactivó la cuenta. */
+  activo: boolean;
   tecnologias: Array<{ idTecnologia: number; nombre: string; nivel: NivelTecnologia }>;
 }
 

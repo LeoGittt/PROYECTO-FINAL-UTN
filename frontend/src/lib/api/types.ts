@@ -480,6 +480,8 @@ export interface Postulacion {
     email?: string;
     carrera: string;
     anioCursada: number;
+    /** `false` si la administración desactivó la cuenta del estudiante. */
+    activo: boolean;
     tecnologias: { nombre: string; nivel: NivelTecnologia }[];
   };
   puntajeTotal: number | null;

@@ -88,6 +88,7 @@ export function Postulantes({ proyecto }: { proyecto: ProyectoDto }) {
                       )}
                     </div>
                     <div className="flex items-center gap-3">
+                      {!p.estudiante.activo && <Badge variante="warning">Cuenta desactivada</Badge>}
                       <EstadoPostulacionBadge estado={p.estado} />
                       {p.puntajeTotal !== null && <ScoreRing valor={p.puntajeTotal} tamano="sm" />}
                     </div>

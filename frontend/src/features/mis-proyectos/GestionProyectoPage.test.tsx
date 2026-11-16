@@ -55,6 +55,28 @@ describe("GestionProyectoPage", () => {
     ]);
   });
 
+  it("marca la postulación de un estudiante cuya cuenta desactivó la administración", async () => {
+    sesion.usuario = usuarioDe("empresa");
+    vi.spyOn(api.proyectos, "obtener").mockResolvedValue(proyectoDe({ cantidadPostulaciones: 2 }));
+    vi.spyOn(api.postulaciones, "delProyecto").mockResolvedValue([
+      postulacionDe(),
+      postulacionDe({
+        idPostulacion: 12,
+        estudiante: { ...postulacionDe().estudiante, idEstudiante: 32, nombre: "Tomás", apellido: "Acosta", activo: false },
+      }),
+    ]);
+    render(
+      <ToastProvider>
+        <GestionProyectoPage idProyecto={1} />
+      </ToastProvider>,
+    );
+    const tarjeta = (nombre: string) => within((screen.getByRole("heading", { name: nombre })).closest("article") as HTMLElement);
+    await screen.findByRole("heading", { name: "Tomás Acosta" });
+
+    expect(tarjeta("Tomás Acosta").getByText("Cuenta desactivada")).toBeInTheDocument();
+    expect(tarjeta("Lucía Fernández").queryByText("Cuenta desactivada")).not.toBeInTheDocument();
+  });
+
   it("el publicador puede ver el historial de cada postulación, que se pide recién al abrirlo", async () => {
     const { persona } = montar();
     const obtener = vi.spyOn(api.postulaciones, "obtener").mockResolvedValue(
