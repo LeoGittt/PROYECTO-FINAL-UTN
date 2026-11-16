@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api/client";
 import { RegistroForm } from "./RegistroForm";
+import { violacionesA11y } from "@/test/axe";
 
 const { registrar, router, busqueda } = vi.hoisted(() => ({
   registrar: vi.fn(),
@@ -210,5 +211,11 @@ describe("RegistroForm", () => {
 
     expect(campo).toHaveAttribute("type", "text");
     expect(boton).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("no tiene problemas de accesibilidad que axe pueda detectar", async () => {
+    render(<RegistroForm />);
+    await screen.findByRole("button", { name: "Continuar" });
+    expect(await violacionesA11y()).toEqual([]);
   });
 });

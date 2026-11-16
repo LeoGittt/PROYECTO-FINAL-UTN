@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api/client";
 import { LoginForm } from "./LoginForm";
+import { violacionesA11y } from "@/test/axe";
 
 const { login, router, busqueda, sesion } = vi.hoisted(() => ({
   login: vi.fn(),
@@ -124,5 +125,11 @@ describe("LoginForm", () => {
     sesion.estado = "autenticado";
     render(<LoginForm />);
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/panel"));
+  });
+
+  it("no tiene problemas de accesibilidad que axe pueda detectar", async () => {
+    render(<LoginForm />);
+    await screen.findByRole("button", { name: "Ingresar" });
+    expect(await violacionesA11y()).toEqual([]);
   });
 });

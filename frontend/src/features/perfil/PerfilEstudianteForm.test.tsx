@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/api/client";
 import { CARRERAS, HABILIDADES, MATERIAS, PERFIL_ESTUDIANTE, TECNOLOGIAS } from "@/test/fixtures";
 import { PerfilEstudianteForm } from "./PerfilEstudianteForm";
 import type { PerfilEstudiante } from "@/lib/api/types";
+import { violacionesA11y } from "@/test/axe";
 
 function montar(perfil: PerfilEstudiante | null = null, alGuardar = vi.fn().mockResolvedValue(undefined)) {
   const usuario = userEvent.setup();
@@ -179,5 +180,11 @@ describe("PerfilEstudianteForm", () => {
     await usuario.selectOptions(carrera(), "1");
 
     expect(Number(indicador().getAttribute("aria-valuenow"))).toBeGreaterThan(0);
+  });
+
+  it("no tiene problemas de accesibilidad que axe pueda detectar", async () => {
+    montar(PERFIL_ESTUDIANTE);
+    await screen.findByRole("button", { name: "Guardar perfil" });
+    expect(await violacionesA11y()).toEqual([]);
   });
 });

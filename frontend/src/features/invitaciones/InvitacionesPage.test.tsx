@@ -7,6 +7,7 @@ import { api } from "@/lib/api/endpoints";
 import type { Invitacion } from "@/lib/api/types";
 import { POSTULACION, invitacionDe } from "@/features/proyectos/fixtures";
 import { InvitacionesPage } from "./InvitacionesPage";
+import { violacionesA11y } from "@/test/axe";
 
 const LISTA = [
   invitacionDe({
@@ -193,5 +194,11 @@ describe("InvitacionesPage", () => {
 
       expect(await screen.findByText("Solo los estudiantes reciben invitaciones")).toBeInTheDocument();
     });
+  });
+
+  it("no tiene problemas de accesibilidad que axe pueda detectar", async () => {
+    montar();
+    await screen.findByRole("link", { name: "Sistema de turnos" });
+    expect(await violacionesA11y()).toEqual([]);
   });
 });

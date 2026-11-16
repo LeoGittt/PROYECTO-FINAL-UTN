@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/api/client";
 import { api } from "@/lib/api/endpoints";
 import { proyectoDe } from "@/features/proyectos/fixtures";
 import { MisProyectosPage } from "./MisProyectosPage";
+import { violacionesA11y } from "@/test/axe";
 
 const LISTA = [
   proyectoDe({ idProyecto: 3, titulo: "Borrador de app", estado: "borrador", fechaPublicacion: null, cantidadPostulaciones: 0 }),
@@ -68,5 +69,12 @@ describe("MisProyectosPage", () => {
     await persona.click(screen.getByRole("button", { name: /Reintentar/ }));
     expect(await screen.findByRole("link", { name: "Sistema de turnos" })).toBeInTheDocument();
     expect(mios).toHaveBeenCalledTimes(2);
+  });
+
+  it("no tiene problemas de accesibilidad que axe pueda detectar", async () => {
+    vi.spyOn(api.proyectos, "mios").mockResolvedValue(LISTA);
+    render(<MisProyectosPage />);
+    await screen.findByRole("link", { name: "Sistema de turnos" });
+    expect(await violacionesA11y()).toEqual([]);
   });
 });

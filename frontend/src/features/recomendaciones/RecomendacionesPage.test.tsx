@@ -6,6 +6,7 @@ import { api } from "@/lib/api/endpoints";
 import type { RecomendacionProyecto, Usuario } from "@/lib/api/types";
 import { POSTULACION, proyectoDe, recomendacionDe, usuarioDe } from "@/features/proyectos/fixtures";
 import { RecomendacionesPage } from "./RecomendacionesPage";
+import { violacionesA11y } from "@/test/axe";
 
 const { sesion } = vi.hoisted(() => ({ sesion: { usuario: null } as { usuario: unknown } }));
 vi.mock("@/lib/auth/AuthProvider", () => ({ useAuth: () => sesion }));
@@ -167,5 +168,11 @@ describe("RecomendacionesPage", () => {
       expect(await screen.findByText("Solo los estudiantes reciben recomendaciones")).toBeInTheDocument();
       expect(screen.queryByRole("link", { name: "Ver proyecto" })).not.toBeInTheDocument();
     });
+  });
+
+  it("no tiene problemas de accesibilidad que axe pueda detectar", async () => {
+    montar();
+    await screen.findByRole("link", { name: "Sistema de turnos" });
+    expect(await violacionesA11y()).toEqual([]);
   });
 });

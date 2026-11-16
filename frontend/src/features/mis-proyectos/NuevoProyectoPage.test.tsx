@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/api/client";
 import { api } from "@/lib/api/endpoints";
 import { proyectoDe } from "@/features/proyectos/fixtures";
 import { NuevoProyectoPage } from "./NuevoProyectoPage";
+import { violacionesA11y } from "@/test/axe";
 
 const { router } = vi.hoisted(() => ({ router: { push: vi.fn() } }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
@@ -101,5 +102,11 @@ describe("NuevoProyectoPage", () => {
     await persona.click(screen.getByRole("button", { name: "Publicar proyecto" }));
     expect(await screen.findByText("Debe completar su perfil antes de publicar proyectos")).toBeInTheDocument();
     expect(router.push).not.toHaveBeenCalled();
+  });
+
+  it("no tiene problemas de accesibilidad que axe pueda detectar", async () => {
+    montar();
+    await screen.findByLabelText(/^Título/);
+    expect(await violacionesA11y()).toEqual([]);
   });
 });

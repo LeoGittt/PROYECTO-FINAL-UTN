@@ -7,6 +7,7 @@ import { api } from "@/lib/api/endpoints";
 import type { UsuarioAdmin } from "@/lib/api/types";
 import { usuarioDe } from "@/features/proyectos/fixtures";
 import { UsuariosAdminPage } from "./UsuariosAdminPage";
+import { violacionesA11y } from "@/test/axe";
 
 const { sesion } = vi.hoisted(() => ({ sesion: { usuario: null as unknown } }));
 vi.mock("@/lib/auth/AuthProvider", () => ({ useAuth: () => sesion }));
@@ -224,5 +225,11 @@ describe("UsuariosAdminPage", () => {
     await persona.click(screen.getByRole("button", { name: "Ver todos los usuarios" }));
     expect(usuarios).toHaveBeenLastCalledWith({ pagina: 1, tamano: 20 }, expect.anything());
     expect(screen.getByLabelText("Rol")).toHaveValue("");
+  });
+
+  it("no tiene problemas de accesibilidad que axe pueda detectar", async () => {
+    montar();
+    await screen.findByText("Ana Pérez");
+    expect(await violacionesA11y()).toEqual([]);
   });
 });

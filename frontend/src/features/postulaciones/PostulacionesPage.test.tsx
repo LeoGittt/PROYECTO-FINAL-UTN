@@ -7,6 +7,7 @@ import { api } from "@/lib/api/endpoints";
 import type { Postulacion } from "@/lib/api/types";
 import { postulacionDe } from "@/features/proyectos/fixtures";
 import { PostulacionesPage } from "./PostulacionesPage";
+import { violacionesA11y } from "@/test/axe";
 
 const LISTA = [
   postulacionDe({
@@ -268,5 +269,11 @@ describe("PostulacionesPage", () => {
 
       expect(await screen.findByText("Solo los estudiantes tienen postulaciones")).toBeInTheDocument();
     });
+  });
+
+  it("no tiene problemas de accesibilidad que axe pueda detectar", async () => {
+    montar();
+    await screen.findByRole("link", { name: "Sistema de turnos" });
+    expect(await violacionesA11y()).toEqual([]);
   });
 });

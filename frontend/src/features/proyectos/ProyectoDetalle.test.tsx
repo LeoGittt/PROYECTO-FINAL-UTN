@@ -8,6 +8,7 @@ import type { Perfil, Usuario } from "@/lib/api/types";
 import { PERFIL_ESTUDIANTE } from "@/test/fixtures";
 import { POSTULACION, PROYECTO, proyectoDe, recomendacionDe, usuarioDe } from "./fixtures";
 import { ProyectoDetalle } from "./ProyectoDetalle";
+import { violacionesA11y } from "@/test/axe";
 
 const { sesion } = vi.hoisted(() => ({ sesion: { usuario: null, perfil: null } as { usuario: unknown; perfil: unknown } }));
 vi.mock("@/lib/auth/AuthProvider", () => ({ useAuth: () => sesion }));
@@ -286,5 +287,11 @@ describe("ProyectoDetalle", () => {
       expect(await screen.findByRole("heading", { name: "No encontramos este proyecto" })).toBeInTheDocument();
       expect(obtener).not.toHaveBeenCalled();
     });
+  });
+
+  it("no tiene problemas de accesibilidad que axe pueda detectar", async () => {
+    montar();
+    await screen.findByRole("heading", { level: 1, name: "Sistema de turnos para un club" });
+    expect(await violacionesA11y()).toEqual([]);
   });
 });

@@ -7,6 +7,7 @@ import { api } from "@/lib/api/endpoints";
 import type { ConfiguracionMotor, Evaluacion, MatchReferencia, UsuarioAdmin } from "@/lib/api/types";
 import { proyectoDe } from "@/features/proyectos/fixtures";
 import { MotorAdminPage } from "./MotorAdminPage";
+import { violacionesA11y } from "@/test/axe";
 
 const CONFIGURACIONES: ConfiguracionMotor[] = [
   { idConfiguracion: 1, nombre: "v1", descripcion: "Tecnologías y contexto.", pesoTecnologias: 0.6, pesoTexto: 0, pesoContexto: 0.4, umbralRecomendacion: 0.5, activa: true },
@@ -279,5 +280,11 @@ describe("MotorAdminPage", () => {
       await persona.click(await screen.findByRole("tab", { name: "Evaluaciones" }));
       expect(await screen.findByText("Todavía no hay evaluaciones")).toBeInTheDocument();
     });
+  });
+
+  it("no tiene problemas de accesibilidad que axe pueda detectar", async () => {
+    montar();
+    await screen.findByRole("heading", { name: "v1" });
+    expect(await violacionesA11y()).toEqual([]);
   });
 });

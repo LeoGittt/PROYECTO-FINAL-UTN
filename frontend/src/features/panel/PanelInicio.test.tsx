@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Perfil, Rol } from "@/lib/api/types";
 import { PERFIL_DOCENTE, PERFIL_EMPRESA, PERFIL_ESTUDIANTE, USUARIO_ESTUDIANTE } from "@/test/fixtures";
 import { PanelInicio } from "./PanelInicio";
+import { violacionesA11y } from "@/test/axe";
 
 const { sesion } = vi.hoisted(() => ({ sesion: { usuario: null, perfil: null } as { usuario: unknown; perfil: unknown } }));
 vi.mock("@/lib/auth/AuthProvider", () => ({ useAuth: () => sesion }));
@@ -74,5 +75,11 @@ describe("PanelInicio", () => {
   it("sin usuario no dibuja nada", () => {
     const { container } = render(<PanelInicio />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("no tiene problemas de accesibilidad que axe pueda detectar", async () => {
+    montar("estudiante", PERFIL_ESTUDIANTE, "Lucía");
+    await screen.findByRole("heading", { level: 1 });
+    expect(await violacionesA11y()).toEqual([]);
   });
 });

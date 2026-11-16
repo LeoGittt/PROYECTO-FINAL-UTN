@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/api/client";
 import { api } from "@/lib/api/endpoints";
 import { TECNOLOGIAS } from "@/test/fixtures";
 import { CatalogosAdminPage } from "./CatalogosAdminPage";
+import { violacionesA11y } from "@/test/axe";
 
 const CATALOGO = [...TECNOLOGIAS, { idTecnologia: 9, nombre: "Docker", categoria: "devops" as const, descripcion: "Contenedores." }];
 
@@ -111,5 +112,11 @@ describe("CatalogosAdminPage", () => {
     expect(actualizar).toHaveBeenCalledWith(9, { nombre: "Docker", categoria: "devops", descripcion: "Contenedores y despliegue." });
     expect(await screen.findByText("Tecnología actualizada")).toBeInTheDocument();
     expect(tecnologias).toHaveBeenCalledTimes(2);
+  });
+
+  it("no tiene problemas de accesibilidad que axe pueda detectar", async () => {
+    montar();
+    await screen.findByRole("cell", { name: "Docker" });
+    expect(await violacionesA11y()).toEqual([]);
   });
 });

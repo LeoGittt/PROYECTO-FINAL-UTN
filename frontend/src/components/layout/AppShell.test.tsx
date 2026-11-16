@@ -4,6 +4,7 @@ import { api } from "@/lib/api/endpoints";
 import type { Rol } from "@/lib/api/types";
 import { usuarioDe } from "@/features/proyectos/fixtures";
 import { AppShell } from "./AppShell";
+import { violacionesA11y } from "@/test/axe";
 
 const { sesion } = vi.hoisted(() => ({ sesion: { usuario: null as unknown, logout: () => {} } }));
 vi.mock("@/lib/auth/AuthProvider", () => ({ useAuth: () => sesion }));
@@ -36,5 +37,11 @@ describe("AppShell", () => {
     await waitFor(() => expect(screen.getAllByRole("navigation", { name: "Navegación principal" }).length).toBeGreaterThan(0));
     expect(screen.queryByRole("link", { name: /^Notificaciones/ })).not.toBeInTheDocument();
     expect(listar).not.toHaveBeenCalled();
+  });
+
+  it("no tiene problemas de accesibilidad que axe pueda detectar", async () => {
+    montar("estudiante");
+    await screen.findByRole("link", { name: "Notificaciones: 2 sin leer" });
+    expect(await violacionesA11y()).toEqual([]);
   });
 });

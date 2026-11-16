@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/api/client";
 import { api } from "@/lib/api/endpoints";
 import { proyectoDe } from "@/features/proyectos/fixtures";
 import { ProyectosAdminPage } from "./ProyectosAdminPage";
+import { violacionesA11y } from "@/test/axe";
 
 const PROYECTOS = [
   proyectoDe({ idProyecto: 1, titulo: "Turnos del club", estado: "publicado", cantidadPostulaciones: 3 }),
@@ -109,5 +110,11 @@ describe("ProyectosAdminPage", () => {
       </ToastProvider>,
     );
     expect(await screen.findByText("No hay proyectos para mostrar")).toBeInTheDocument();
+  });
+
+  it("no tiene problemas de accesibilidad que axe pueda detectar", async () => {
+    montar();
+    await screen.findByRole("link", { name: "Turnos del club" });
+    expect(await violacionesA11y()).toEqual([]);
   });
 });

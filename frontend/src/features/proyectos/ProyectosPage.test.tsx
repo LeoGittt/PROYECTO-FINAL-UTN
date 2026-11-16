@@ -7,6 +7,7 @@ import type { Pagina, ProyectoDto } from "@/lib/api/types";
 import { TECNOLOGIAS } from "@/test/fixtures";
 import { proyectoDe } from "./fixtures";
 import { ProyectosPage } from "./ProyectosPage";
+import { violacionesA11y } from "@/test/axe";
 
 const pagina = (items: ProyectoDto[], extra: Partial<Pagina<ProyectoDto>> = {}): Pagina<ProyectoDto> => ({
   items,
@@ -171,5 +172,11 @@ describe("ProyectosPage", () => {
 
     expect(await screen.findByText(/No pudimos cargar las tecnologías/)).toBeInTheDocument();
     expect(await screen.findByRole("link", { name: "Sistema de turnos" })).toBeInTheDocument();
+  });
+
+  it("no tiene problemas de accesibilidad que axe pueda detectar", async () => {
+    montar();
+    await screen.findByRole("link", { name: "Sistema de turnos" });
+    expect(await violacionesA11y()).toEqual([]);
   });
 });

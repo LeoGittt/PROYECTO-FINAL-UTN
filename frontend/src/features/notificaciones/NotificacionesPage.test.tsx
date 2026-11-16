@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/api/client";
 import { api } from "@/lib/api/endpoints";
 import type { Notificacion } from "@/lib/api/types";
 import { NotificacionesPage } from "./NotificacionesPage";
+import { violacionesA11y } from "@/test/axe";
 
 const NOTIFICACIONES: Notificacion[] = [
   {
@@ -154,5 +155,11 @@ describe("NotificacionesPage", () => {
     const alerta = titulo.closest("[role=alert]") as HTMLElement;
     expect(alerta).toHaveTextContent("Ocurrió un error en el servidor.");
     expect(within(alerta).getByRole("button", { name: "Reintentar" })).toBeInTheDocument();
+  });
+
+  it("no tiene problemas de accesibilidad que axe pueda detectar", async () => {
+    montar();
+    await screen.findByText("Acme SA te invitó a «Sistema de turnos».");
+    expect(await violacionesA11y()).toEqual([]);
   });
 });

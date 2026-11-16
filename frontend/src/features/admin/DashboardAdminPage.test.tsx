@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/api/client";
 import { api } from "@/lib/api/endpoints";
 import type { Dashboard, ResumenReportes } from "@/lib/api/types";
 import { DashboardAdminPage } from "./DashboardAdminPage";
+import { violacionesA11y } from "@/test/axe";
 
 const DASHBOARD: Dashboard = {
   tecnologiasDemandadas: {
@@ -171,5 +172,12 @@ describe("DashboardAdminPage", () => {
     await persona.click(within(titulo.closest("[role=alert]") as HTMLElement).getByRole("button", { name: "Reintentar" }));
     expect(await screen.findByRole("list", { name: "Tecnologías más demandadas" })).toBeInTheDocument();
     expect(pedirDashboard).toHaveBeenCalledTimes(2);
+  });
+
+  it("no tiene problemas de accesibilidad que axe pueda detectar", async () => {
+    montar();
+    await screen.findByText("Estudiantes activos");
+    await screen.findByRole("table", { name: "Proyectos publicados por mes que piden cada tecnología" });
+    expect(await violacionesA11y()).toEqual([]);
   });
 });

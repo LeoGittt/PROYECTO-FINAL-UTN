@@ -13,6 +13,7 @@ import {
   usuarioDe,
 } from "@/features/proyectos/fixtures";
 import { GestionProyectoPage } from "./GestionProyectoPage";
+import { violacionesA11y } from "@/test/axe";
 
 const { sesion } = vi.hoisted(() => ({ sesion: { usuario: null as unknown } }));
 vi.mock("@/lib/auth/AuthProvider", () => ({ useAuth: () => sesion }));
@@ -230,5 +231,11 @@ describe("GestionProyectoPage", () => {
     );
     expect(screen.getByText("No encontramos este proyecto")).toBeInTheDocument();
     expect(obtener).not.toHaveBeenCalled();
+  });
+
+  it("no tiene problemas de accesibilidad que axe pueda detectar", async () => {
+    montar();
+    await screen.findByRole("heading", { name: "Lucía Fernández" });
+    expect(await violacionesA11y()).toEqual([]);
   });
 });

@@ -236,7 +236,7 @@ npm run test:e2e      # pruebas de la API contra una base PGlite en memoria
 npm run lint
 
 cd ../frontend
-npm test              # pruebas de componentes y pantallas
+npm test              # pruebas de componentes y pantallas, con una revisión de accesibilidad (axe)
 npm run lint
 npm run build
 ```
