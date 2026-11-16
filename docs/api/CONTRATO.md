@@ -192,12 +192,12 @@ Se generan a partir de los eventos del dominio: `match.nuevo` (al estudiante), `
 | Método y ruta | Quién | Descripción |
 |---|---|---|
 | `GET /admin/usuarios?rol=&activo=&q=&pagina=&tamano=` | admin | `{ items: [{ idUsuario, nombre, apellido, email, rol, activo, fechaRegistro }], total, pagina, tamano }` |
-| `PATCH /admin/usuarios/:id` | admin | `{ activo?, rol? }`. Un admin no puede desactivarse ni cambiarse el rol a sí mismo (409) |
-| `POST /admin/administradores` | admin | `{ nombre, apellido, email, contrasena }` → 201 |
-| `POST /admin/usuarios/:id/restablecer-contrasena` | admin | `{ contrasenaNueva }` → 204 |
-| `GET /admin/proyectos?estado=` | admin | Todos los proyectos |
-| `POST /admin/proyectos/:id/suspender` | admin | `{ motivo }`. Solo desde `publicado` o `en_curso` |
-| `POST /admin/proyectos/:id/reactivar` | admin | `suspendido` → `publicado` |
+| `PATCH /admin/usuarios/:id` | admin | `{ activo?, rol? }` (al menos uno; `rol` es `estudiante`, `empresa` o `docente`) → 200 con el renglón del listado. Un admin no puede desactivarse ni cambiarse el rol a sí mismo (409). El rol solo cambia si el usuario todavía no completó su perfil (409). 404 si no existe. Desactivar corta la sesión del usuario al instante |
+| `POST /admin/administradores` | admin | `{ nombre, apellido, email, contrasena }` → 201 con el renglón del listado. 409 si el email ya está registrado |
+| `POST /admin/usuarios/:id/restablecer-contrasena` | admin | `{ contrasenaNueva }` (misma política que el registro) → 204. 404 si no existe |
+| `GET /admin/proyectos?estado=` | admin | Todos los proyectos, borradores incluidos, los más nuevos primero, con `cantidadPostulaciones` |
+| `POST /admin/proyectos/:id/suspender` | admin | `{ motivo }` (1 a 200 caracteres) → 200 con el proyecto. Solo desde `publicado` o `en_curso` (409). Deja de verse para los estudiantes y su dueño no lo puede editar. Se avisa al publicador, con el motivo, y a los estudiantes con postulación activa |
+| `POST /admin/proyectos/:id/reactivar` | admin | `suspendido` → `publicado` → 200 con el proyecto (409 desde cualquier otro estado). Se recalculan sus recomendaciones y se avisa al publicador |
 | `GET /reportes/resumen` | admin | RF-07: `{ estudiantesActivos, empresasActivas, docentesActivos, proyectosPorEstado: {}, postulacionesPorEstado: {} }` |
 | `GET /reportes/dashboard` | admin | RF-11, ver abajo |
 | `GET /publico/estadisticas` | público | `{ estudiantes, proyectosPublicados, publicadores, postulaciones }` para la portada |
@@ -218,4 +218,6 @@ Se generan a partir de los eventos del dominio: `match.nuevo` (al estudiante), `
 }
 ```
 
-Los cuatro primeros bloques salen de las vistas `vw_*` de `schema.sql`; `evaluacionMotor` es la última evaluación de cada configuración.
+Los cuatro primeros bloques salen de las vistas `vw_*` de `schema.sql`; `evaluacionMotor` es la última evaluación de cada configuración. El ranking va de la tecnología más pedida a la menos pedida y suma todos los meses; `evolucion` y `embudo` van del mes más viejo al más nuevo. `promedioDias` es `null` cuando ningún estudiante tiene todavía una postulación aceptada, y `pctEntrevistaACierre` es `null` en un mes sin entrevistas.
+
+`proyectosPorEstado` y `postulacionesPorEstado` solo traen los estados que tienen al menos un registro. `GET /publico/estadisticas` cuenta los usuarios activos, los proyectos en estado `publicado` y todas las postulaciones.

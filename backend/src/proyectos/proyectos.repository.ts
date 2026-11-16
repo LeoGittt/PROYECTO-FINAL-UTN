@@ -193,6 +193,24 @@ export class ProyectosRepository {
     return this.conRelaciones(rows);
   }
 
+  /** Todos los proyectos (para el administrador), los más nuevos primero, opcionalmente de un estado. */
+  async listarTodos(estado?: EstadoProyecto): Promise<FilaProyecto[]> {
+    const { rows } = await this.db.query<FilaBase>(
+      `${SELECT_PROYECTO}
+        WHERE ($1::estado_proyecto IS NULL OR p.estado = $1::estado_proyecto)
+        ORDER BY p.id_proyecto DESC`,
+      [estado ?? null],
+    );
+    return this.conRelaciones(rows);
+  }
+
+  async contarPorEstado(): Promise<Partial<Record<EstadoProyecto, number>>> {
+    const { rows } = await this.db.query<{ estado: EstadoProyecto; cantidad: number }>(
+      'SELECT estado, count(*)::int AS cantidad FROM proyecto GROUP BY estado',
+    );
+    return Object.fromEntries(rows.map((r) => [r.estado, r.cantidad]));
+  }
+
   /** Búsqueda de proyectos publicados, los más nuevos primero. */
   async buscarPublicados(
     filtros: FiltrosBusqueda,

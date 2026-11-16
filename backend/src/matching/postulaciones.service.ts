@@ -119,6 +119,11 @@ export class PostulacionesService implements OnModuleInit {
     return this.armarPostulaciones(filas, usuario);
   }
 
+  /** Para los reportes de M5. */
+  contarPorEstado(): Promise<Partial<Record<EstadoPostulacion, number>>> {
+    return this.repositorio.contarPorEstado();
+  }
+
   /**
    * Para M4: los usuarios de los estudiantes con una postulación activa (ni rechazada ni
    * retirada) en el proyecto, a quienes se avisa cuando el proyecto cambia de estado.

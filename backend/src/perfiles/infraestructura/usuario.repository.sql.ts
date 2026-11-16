@@ -126,6 +126,10 @@ export class UsuarioRepositorySql implements UsuarioRepository {
     // Solo se arman placeholders: los valores viajan siempre como parámetros.
     const params: unknown[] = [];
     const condiciones: string[] = [];
+    if (filtro.idUsuario !== undefined) {
+      params.push(filtro.idUsuario);
+      condiciones.push(`u.id_usuario = $${params.length}`);
+    }
     if (filtro.rol) {
       params.push(filtro.rol);
       condiciones.push(`u.rol = $${params.length}::rol_usuario`);

@@ -43,6 +43,8 @@ export interface DatosNuevoUsuario {
 }
 
 export interface FiltroUsuarios {
+  /** Para traer un único usuario con la forma del listado. */
+  idUsuario?: number;
   rol?: Rol;
   activo?: boolean;
   /** Texto a buscar en nombre, apellido o email. */

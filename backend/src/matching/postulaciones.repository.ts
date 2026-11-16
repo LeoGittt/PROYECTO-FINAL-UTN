@@ -118,6 +118,13 @@ export class PostulacionesRepository {
   }
 
   /** Cantidad de postulaciones de cada proyecto pedido (los que no tienen, no aparecen). */
+  async contarPorEstado(): Promise<Partial<Record<EstadoPostulacion, number>>> {
+    const { rows } = await this.db.query<{ estado: EstadoPostulacion; cantidad: number }>(
+      'SELECT estado, count(*)::int AS cantidad FROM postulacion GROUP BY estado',
+    );
+    return Object.fromEntries(rows.map((r) => [r.estado, r.cantidad]));
+  }
+
   async contarPorProyecto(idsProyecto: readonly number[]): Promise<Map<number, number>> {
     const { rows } = await this.db.query<{ idProyecto: number; cantidad: number }>(
       `SELECT id_proyecto, count(*)::int AS cantidad FROM postulacion

@@ -183,6 +183,39 @@ export class ProyectosService {
     return this.armarDtos(await this.repositorio.buscarPorIds(ids), solicitante);
   }
 
+  // =========================================================================
+  // Administración (M5)
+  // =========================================================================
+
+  /** Todos los proyectos, con la cantidad de postulaciones (solo el administrador). */
+  async listarTodos(estado: EstadoProyecto | undefined, admin: UsuarioAutenticado): Promise<ProyectoDto[]> {
+    return this.armarDtos(await this.repositorio.listarTodos(estado), admin);
+  }
+
+  contarPorEstado(): Promise<Partial<Record<EstadoProyecto, number>>> {
+    return this.repositorio.contarPorEstado();
+  }
+
+  /** La administración suspende un proyecto publicado o en curso: deja de mostrarse a los estudiantes. */
+  async suspender(idProyecto: number, motivo: string, admin: UsuarioAutenticado): Promise<ProyectoDto> {
+    const proyecto = await this.obtener(idProyecto, admin);
+    if (proyecto.estado !== 'publicado' && proyecto.estado !== 'en_curso') {
+      throw new ErrorConflicto('Solo se puede suspender un proyecto publicado o en curso');
+    }
+    await this.aplicarCambioDeEstado(proyecto, 'suspendido', motivo);
+    return this.obtener(idProyecto, admin);
+  }
+
+  /** Un proyecto suspendido vuelve a estar publicado. */
+  async reactivar(idProyecto: number, admin: UsuarioAutenticado): Promise<ProyectoDto> {
+    const proyecto = await this.obtener(idProyecto, admin);
+    if (proyecto.estado !== 'suspendido') {
+      throw new ErrorConflicto('Solo se puede reactivar un proyecto suspendido');
+    }
+    await this.aplicarCambioDeEstado(proyecto, 'publicado');
+    return this.obtener(idProyecto, admin);
+  }
+
   /** Los proyectos que puntúa el motor: todos menos los borradores. */
   async listarParaMatching(): Promise<ProyectoDto[]> {
     return this.armarDtos(await this.repositorio.listarParaMatching());
