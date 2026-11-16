@@ -38,13 +38,14 @@ interface RoleGuardProps {
  * La protección real está en el backend; esto evita mostrar pantallas que no corresponden.
  */
 export function RoleGuard({ roles, children }: RoleGuardProps) {
-  const { estado, usuario } = useAuth();
+  const { estado, usuario, cerradaPorUsuario } = useAuth();
   const router = useRouter();
   const ruta = usePathname();
 
   useEffect(() => {
-    if (estado === "anonimo") router.replace(`/login?siguiente=${encodeURIComponent(ruta)}`);
-  }, [estado, router, ruta]);
+    // Si cerró la sesión él mismo, el cierre ya lo lleva al inicio.
+    if (estado === "anonimo" && !cerradaPorUsuario) router.replace(`/login?siguiente=${encodeURIComponent(ruta)}`);
+  }, [estado, cerradaPorUsuario, router, ruta]);
 
   if (estado === "cargando") return <PantallaCarga mensaje="Verificando tu sesión…" />;
   if (estado === "anonimo" || !usuario) return <PantallaCarga mensaje="Redirigiendo al inicio de sesión…" />;

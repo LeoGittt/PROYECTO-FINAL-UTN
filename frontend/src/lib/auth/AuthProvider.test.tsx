@@ -33,12 +33,13 @@ const SESION = { usuario: USUARIO_ESTUDIANTE, perfil: PERFIL_ESTUDIANTE };
 
 /** Muestra el estado del contexto y expone las acciones como botones. */
 function Sonda({ credenciales = { email: "ana@utn.edu.ar", contrasena: "clave1234" } }: { credenciales?: LoginInput }) {
-  const { estado, usuario, perfil, login, logout, refrescar } = useAuth();
+  const { estado, usuario, perfil, cerradaPorUsuario, login, logout, refrescar } = useAuth();
   return (
     <div>
       <p data-testid="estado">{estado}</p>
       <p data-testid="usuario">{usuario ? `${usuario.nombre} ${usuario.apellido}` : "-"}</p>
       <p data-testid="perfil">{perfil ? "con perfil" : "sin perfil"}</p>
+      <p data-testid="cerrada">{cerradaPorUsuario ? "si" : "no"}</p>
       <button onClick={() => login(credenciales).catch(() => undefined)}>login</button>
       <button onClick={() => logout()}>logout</button>
       <button onClick={() => void refrescar()}>refrescar</button>
@@ -230,6 +231,7 @@ describe("AuthProvider", () => {
       expect(getToken()).toBeNull();
       expect(window.localStorage.getItem(TOKEN_STORAGE_KEY)).toBeNull();
       expect(router.push).toHaveBeenCalledWith("/");
+      expect(screen.getByTestId("cerrada")).toHaveTextContent("si");
     });
   });
 

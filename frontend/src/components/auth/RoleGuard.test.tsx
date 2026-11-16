@@ -6,7 +6,11 @@ import { RoleGuard, rutaInternaSegura } from "./RoleGuard";
 
 const { router, sesion } = vi.hoisted(() => ({
   router: { replace: vi.fn(), push: vi.fn() },
-  sesion: { estado: "anonimo", usuario: null } as { estado: string; usuario: unknown },
+  sesion: { estado: "anonimo", usuario: null, cerradaPorUsuario: false } as {
+    estado: string;
+    usuario: unknown;
+    cerradaPorUsuario: boolean;
+  },
 }));
 
 vi.mock("next/navigation", () => ({
@@ -25,6 +29,19 @@ describe("RoleGuard", () => {
     router.replace.mockReset();
     sesion.estado = "anonimo";
     sesion.usuario = null;
+    sesion.cerradaPorUsuario = false;
+  });
+
+  it("si el usuario cerró la sesión no lo manda al login con la ruta anterior (el cierre ya lo lleva al inicio)", () => {
+    sesion.cerradaPorUsuario = true;
+    render(
+      <RoleGuard>
+        <p>secreto</p>
+      </RoleGuard>,
+    );
+
+    expect(router.replace).not.toHaveBeenCalled();
+    expect(screen.queryByText("secreto")).not.toBeInTheDocument();
   });
 
   it("mientras verifica la sesión muestra una carga y no el contenido ni una redirección", () => {

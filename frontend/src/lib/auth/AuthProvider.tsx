@@ -28,6 +28,11 @@ interface Sesion {
   estado: EstadoSesion;
   usuario: Usuario | null;
   perfil: Perfil | null;
+  /**
+   * `true` si el usuario cerró la sesión él mismo. Así las pantallas protegidas no lo mandan al
+   * login con `?siguiente=` (el próximo en entrar terminaría en la pantalla del anterior).
+   */
+  cerradaPorUsuario?: boolean;
 }
 
 interface AuthContextValue extends Sesion {
@@ -117,7 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     clearToken();
-    setSesion(ANONIMO);
+    setSesion({ ...ANONIMO, cerradaPorUsuario: true });
     router.push("/");
   }, [router]);
 
