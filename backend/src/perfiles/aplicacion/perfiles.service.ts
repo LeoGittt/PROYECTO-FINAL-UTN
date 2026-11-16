@@ -90,8 +90,16 @@ export class PerfilesService {
     await this.cambiarActivo(idUsuario, false);
   }
 
+  /**
+   * Un estudiante inactivo no se puntúa: al reactivarlo se avisa como si hubiera actualizado su
+   * perfil, para que el motor lo calcule con los proyectos publicados mientras no estaba.
+   */
   async activarUsuario(idUsuario: number): Promise<void> {
     await this.cambiarActivo(idUsuario, true);
+    const idEstudiante = await this.obtenerIdEstudiante(idUsuario);
+    if (idEstudiante !== null) {
+      await this.eventos.publicar(EVENTO_PERFIL_ACTUALIZADO, { idUsuario, rol: 'estudiante', idEstudiante });
+    }
   }
 
   /**
@@ -101,6 +109,11 @@ export class PerfilesService {
   async cambiarRol(idUsuario: number, rol: Rol): Promise<void> {
     const usuario = await this.obtenerUsuario(idUsuario);
     if (usuario.rol === rol) return;
+    // Un administrador no tiene perfil, pero quitarle el rol podría dejar la plataforma sin nadie
+    // que la administre.
+    if (usuario.rol === 'administrador') {
+      throw new ErrorConflicto('No se puede cambiar el rol de un administrador');
+    }
     if (await this.usuarios.tienePerfil(idUsuario)) {
       throw new ErrorConflicto(
         'No se puede cambiar el rol de un usuario que ya completó su perfil',

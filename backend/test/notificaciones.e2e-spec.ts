@@ -45,6 +45,17 @@ describe('Notificaciones (e2e)', () => {
     vi.restoreAllMocks();
   });
 
+  it('las notificaciones del seed usan solo los tipos del contrato y pantallas que existen', async () => {
+    const { rows } = await t.db.query<{ tipo: string; urlReferencia: string | null }>(
+      'SELECT DISTINCT tipo, url_referencia FROM notificacion',
+    );
+    const tipos = ['nuevo_match', 'invitacion', 'nueva_postulacion', 'cambio_estado_postulacion', 'cambio_estado_proyecto'];
+    for (const fila of rows) {
+      expect(tipos).toContain(fila.tipo);
+      expect(fila.urlReferencia).toMatch(/^\/(proyectos\/\d+|mis-proyectos\/\d+|postulaciones|invitaciones)$/);
+    }
+  });
+
   it('sin sesión es 401', async () => {
     await t.http().get('/api/notificaciones').expect(401);
     await t.http().post('/api/notificaciones/1/leer').expect(401);

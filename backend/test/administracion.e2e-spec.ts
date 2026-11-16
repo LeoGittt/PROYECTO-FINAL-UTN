@@ -9,7 +9,14 @@ import {
   registrarUsuario,
   USUARIOS_SEMILLA,
 } from './ayudantes/app.js';
-import { crearEstudiante, crearProyecto, crearPublicador, cuerpoProyecto, type Persona } from './ayudantes/datos.js';
+import {
+  crearEstudiante,
+  crearProyecto,
+  crearPublicador,
+  cuerpoProyecto,
+  idsTecnologias,
+  type Persona,
+} from './ayudantes/datos.js';
 
 /** La contraseña con la que `registrarUsuario` da de alta a los usuarios de prueba. */
 const CLAVE_DE_PRUEBA = 'Clave1234';
@@ -110,6 +117,43 @@ describe('Administración y reportes (e2e)', () => {
 
       await t.http().patch(`/api/admin/usuarios/${persona.idUsuario}`).set(admin).send({ activo: true }).expect(200);
       await login(persona.email, CLAVE_DE_PRUEBA).expect(200);
+    });
+
+    it('al reactivar a un estudiante recibe el puntaje de los proyectos publicados mientras estaba inactivo', async () => {
+      const [react] = await idsTecnologias(t.http(), 'React');
+      const persona = await crearEstudiante(t.http, {
+        tecnologias: [{ idTecnologia: react, nivel: 'avanzado' }],
+        anioCursada: 5,
+        horasSemanales: 40,
+      });
+      const publicador = await crearPublicador(t.http);
+      await t.http().patch(`/api/admin/usuarios/${persona.idUsuario}`).set(admin).send({ activo: false }).expect(200);
+      const { idProyecto } = await crearProyecto(t.http(), publicador.token, {
+        tecnologias: [{ idTecnologia: react, obligatoria: true }],
+      });
+      await t.http().patch(`/api/admin/usuarios/${persona.idUsuario}`).set(admin).send({ activo: true }).expect(200);
+
+      const sesion = (await login(persona.email, CLAVE_DE_PRUEBA).expect(200)).body.token;
+      const { body } = await t
+        .http()
+        .get('/api/matching/recomendaciones?limite=50')
+        .set(conSesion(sesion))
+        .expect(200);
+      expect(body.map((r: { proyecto: { idProyecto: number } }) => r.proyecto.idProyecto)).toContain(idProyecto);
+    });
+
+    it('no se le puede cambiar el rol a otro administrador (409)', async () => {
+      const datos = { nombre: 'Otro', apellido: 'Admin', email: emailUnico('admin'), contrasena: 'Segura2026' };
+      const otro = (await t.http().post('/api/admin/administradores').set(admin).send(datos).expect(201)).body;
+      const respuesta = await t
+        .http()
+        .patch(`/api/admin/usuarios/${otro.idUsuario}`)
+        .set(admin)
+        .send({ rol: 'estudiante' })
+        .expect(409);
+      expect(respuesta.body.message).toBe('No se puede cambiar el rol de un administrador');
+      // Desactivar a otro administrador sí se puede.
+      await t.http().patch(`/api/admin/usuarios/${otro.idUsuario}`).set(admin).send({ activo: false }).expect(200);
     });
 
     it('un administrador no puede desactivarse ni cambiarse el rol a sí mismo (409)', async () => {
