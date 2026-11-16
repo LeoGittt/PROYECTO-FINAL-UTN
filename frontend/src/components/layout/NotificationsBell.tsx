@@ -1,16 +1,43 @@
+"use client";
+
 import { Bell } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api/endpoints";
 
-interface NotificationsBellProps {
-  /**
-   * Cantidad de notificaciones sin leer. Por ahora la pantalla de notificaciones
-   * todavía no está conectada, así que el encabezado no pasa ningún valor.
-   */
-  noLeidas?: number;
+const EVENTO_CAMBIO = "notificaciones:cambio";
+
+/** La pantalla de notificaciones lo llama después de marcar algo como leído, para que la campana se actualice. */
+export function avisarCambioDeNotificaciones() {
+  window.dispatchEvent(new Event(EVENTO_CAMBIO));
 }
 
-/** Campana de notificaciones: enlaza a /notificaciones y avisa la cantidad sin leer. */
-export function NotificationsBell({ noLeidas = 0 }: NotificationsBellProps) {
+/**
+ * Campana de notificaciones: enlaza a /notificaciones y avisa la cantidad sin leer.
+ * La cantidad se vuelve a pedir al cambiar de pantalla y cuando la pantalla de notificaciones avisa un cambio.
+ */
+export function NotificationsBell() {
+  const ruta = usePathname();
+  const [noLeidas, setNoLeidas] = useState(0);
+
+  useEffect(() => {
+    const controlador = new AbortController();
+    function contar() {
+      api.notificaciones
+        .listar({ soloNoLeidas: true, limite: 1 }, { signal: controlador.signal })
+        .then((respuesta) => setNoLeidas(respuesta.noLeidas))
+        // Si la consulta falla, la campana sigue siendo un enlace con el último número conocido.
+        .catch(() => {});
+    }
+    contar();
+    window.addEventListener(EVENTO_CAMBIO, contar);
+    return () => {
+      controlador.abort();
+      window.removeEventListener(EVENTO_CAMBIO, contar);
+    };
+  }, [ruta]);
+
   const etiqueta = noLeidas > 0 ? `Notificaciones: ${noLeidas} sin leer` : "Notificaciones";
   return (
     <Link
