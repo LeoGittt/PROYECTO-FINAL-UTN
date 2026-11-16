@@ -1,12 +1,37 @@
+import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
+import {
+  cargarArchivoEnv,
+  cargarConfiguracion,
+} from './compartido/infraestructura/configuracion/configuracion.js';
+import { configurarAplicacion, PREFIJO_API } from './configurar-aplicacion.js';
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+async function arrancar(): Promise<void> {
+  const logger = new Logger('Arranque');
+  cargarArchivoEnv();
+  const configuracion = cargarConfiguracion(process.env);
+  if (configuracion.seguridad.jwtSecretoGenerado) {
+    logger.warn(
+      'JWT_SECRET no está definido: se generó un secreto temporal. Las sesiones se pierden al reiniciar.',
+    );
+  }
 
-  // El frontend (Next.js) corre en el 3000, la API en el 3001.
-  app.enableCors({ origin: process.env.FRONTEND_URL ?? 'http://localhost:3000' });
+  const app = await NestFactory.create(AppModule.registrar(configuracion));
+  configurarAplicacion(app, configuracion);
+  // Cierra la base (y la libera) al recibir SIGINT o SIGTERM.
+  app.enableShutdownHooks();
 
-  await app.listen(process.env.PORT ?? 3001);
+  await app.listen(configuracion.puerto);
+  logger.log(`API lista en http://localhost:${configuracion.puerto}${PREFIJO_API}`);
 }
-await bootstrap();
+
+try {
+  await arrancar();
+} catch (error) {
+  // Un fallo de configuración o de base de datos al arrancar se informa y termina el proceso.
+  new Logger('Arranque').error(
+    error instanceof Error ? error.message : String(error),
+  );
+  process.exit(1);
+}

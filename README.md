@@ -3,7 +3,7 @@
 Una plataforma para que los estudiantes de la UTN consigan su primera experiencia laboral real.
 
 Proyecto Final, Tecnicatura Universitaria en Programación (UTN).
-Estado: en desarrollo.
+Estado: MVP terminado y probado; falta el despliegue.
 
 ## De qué se trata
 
@@ -63,6 +63,9 @@ estudiante de primer año a algo que le va a quedar grande.
 
 Las tres cosas se combinan en un puntaje único, y ese puntaje es el que ordena las sugerencias.
 
+En la plataforma esto quedó como dos configuraciones del motor: v1 usa las tecnologías y el
+contexto, y v2 suma la comparación de textos. El administrador elige cuál está activa.
+
 ### Y sobre todo: medimos si funciona
 
 Cualquiera puede escribir un algoritmo de recomendación. Lo difícil, y lo interesante para
@@ -112,12 +115,18 @@ PROYECTO-FINAL-UTN/
     database/
       schema.sql          esquema de la base de datos
       seed.sql            datos de ejemplo
-    src/
+    src/                  un módulo por carpeta (perfiles, proyectos, matching,
+                          comunicacion, administracion)
+    test/                 pruebas de punta a punta de la API
   frontend/               aplicación web en Next.js (App Router)
-    src/app/
+    src/app/              rutas
+    src/features/         pantallas de cada parte del sistema
   docs/
     _TRABAJO-INTEGRADOR-FINAL.pdf    Entrega 1
     entrega-2/            Entrega 2: diseño y módulos
+    api/CONTRATO.md       contrato de la API REST
+    DEPLOY.md             guía de despliegue
+  render.yaml             configuración del servicio de la API en Render
   README.md
 ```
 
@@ -135,6 +144,11 @@ La Entrega 2 (Diseño y Módulos) está en `docs/entrega-2/`:
 
 El esquema de la base está en [backend/database/schema.sql](backend/database/schema.sql) y los datos de ejemplo en [backend/database/seed.sql](backend/database/seed.sql).
 
+Para la implementación:
+
+- [docs/api/CONTRATO.md](docs/api/CONTRATO.md): cada endpoint de la API, con sus datos de entrada, respuestas y errores.
+- [docs/DEPLOY.md](docs/DEPLOY.md): cómo publicar la base en Supabase, la API en Render y la web en Vercel.
+
 ## Cómo levantarlo
 
 Necesitás Node.js 20.9 o superior (lo exige Next.js 16). Primero se clona el repositorio:
@@ -144,8 +158,10 @@ git clone https://github.com/LeoGittt/PROYECTO-FINAL-UTN.git
 cd PROYECTO-FINAL-UTN
 ```
 
-Cada aplicación se instala y se corre por separado, en dos terminales distintas. Por ahora
-ninguna de las dos necesita la base de datos para arrancar.
+Cada aplicación se instala y se corre por separado, en dos terminales distintas. No hace
+falta instalar PostgreSQL ni crear archivos `.env`: si no hay `DATABASE_URL`, la API usa
+PGlite (PostgreSQL embebido) y en el primer arranque carga el esquema, los datos de ejemplo
+y calcula las compatibilidades. Los datos quedan en `backend/.data/pglite`.
 
 ```bash
 # Terminal 1: la API
@@ -164,22 +180,29 @@ El backend ya viene con CORS habilitado hacia el frontend.
 
 ### Variables de entorno
 
-Cada aplicación tiene un archivo `.env.example` con las variables que usa. Para el backend
-se copia como `backend/.env` y para el frontend como `frontend/.env.local`.
+Cada aplicación tiene un archivo `.env.example` con todas las variables que usa, explicadas.
+Para el backend se copia como `backend/.env` y para el frontend como `frontend/.env.local`.
+En desarrollo todas son opcionales. Las principales:
 
 - `PORT` (backend): puerto de la API. Por defecto, 3001.
-- `FRONTEND_URL` (backend): origen permitido por CORS. Por defecto, `http://localhost:3000`.
-- `DATABASE_URL` (backend): cadena de conexión a PostgreSQL, local o de Supabase.
-- `NEXT_PUBLIC_API_URL` (frontend): URL de la API.
-
-`PORT` y `FRONTEND_URL` ya las usa el backend. `DATABASE_URL` y `NEXT_PUBLIC_API_URL` se van
-a usar cuando se conecten la base de datos y la API; en ese momento se agrega también la
-carga automática del archivo `.env` en el backend.
+- `FRONTEND_URL` (backend): origen permitido por CORS y base de los enlaces de los emails. Por defecto, `http://localhost:3000`.
+- `DATABASE_URL` (backend): cadena de conexión a PostgreSQL, local o de Supabase. Vacía, se usa PGlite.
+- `JWT_SECRET` (backend): secreto para firmar las sesiones. Obligatorio en producción; en desarrollo, si falta, se genera uno en cada arranque y las sesiones se pierden al reiniciar la API.
+- `EMAIL_TRANSPORT` (backend): `log` escribe los emails en la consola de la API; `smtp` los envía con las variables `SMTP_*`.
+- `NEXT_PUBLIC_API_URL` (frontend): URL de la API, con el prefijo `/api`. Por defecto, `http://localhost:3001/api`.
 
 ### Base de datos
 
-Necesitás PostgreSQL 15 o superior, local o en Supabase. Los scripts se ejecutan sobre una
-base vacía, primero el esquema y después los datos de ejemplo. Con PostgreSQL local:
+Para volver la base local a los datos de ejemplo (borra todo lo que se haya cargado):
+
+```bash
+cd backend
+npm run db:reset
+```
+
+Para usar un PostgreSQL real (15 o superior, local o en Supabase) se define `DATABASE_URL`.
+Con `DB_AUTO_INIT=true` la API carga el esquema y los datos si la base está vacía. También se
+pueden cargar a mano, primero el esquema y después los datos de ejemplo. Con PostgreSQL local:
 
 ```bash
 createdb utn_match
@@ -195,24 +218,48 @@ psql "$DATABASE_URL" -f backend/database/schema.sql
 psql "$DATABASE_URL" -f backend/database/seed.sql
 ```
 
-Todos los usuarios de ejemplo usan la contraseña `UtnMatch2026!`.
+### Usuarios de prueba
+
+Todos los usuarios de ejemplo usan la contraseña `UtnMatch2026!`. Uno por rol:
+
+- Estudiante: `lucia.fernandez@alumnos.utnmatch.test`
+- Empresa: `martin.paz@andessoftware.test`
+- Docente: `silvia.morales@docentes.utnmatch.test`
+- Administrador: `admin@utnmatch.test`
+
+### Pruebas
+
+```bash
+cd backend
+npm test              # pruebas unitarias
+npm run test:e2e      # pruebas de la API contra una base PGlite en memoria
+npm run lint
+
+cd ../frontend
+npm test              # pruebas de componentes y pantallas, con una revisión de accesibilidad (axe)
+npm run lint
+npm run build
+```
 
 ## Una honestidad sobre los datos
 
 El punto flojo de una plataforma como esta es que, para mostrarla funcionando, hace falta
 gente y proyectos reales. Y no los tenemos todavía.
 
-Lo que vamos a hacer es armar un conjunto de datos simulado pero realista (estudiantes y
-proyectos que podrían existir perfectamente) y conseguir algunas búsquedas reales adaptadas
-de portales de empleo, para que la demo no se sienta de juguete.
+Por eso la demo usa un conjunto de datos simulado pero realista, en `backend/database/seed.sql`:
+20 estudiantes, 5 empresas, 3 docentes, 14 proyectos con postulaciones en distintos estados,
+y 48 pares estudiante-proyecto etiquetados como buen o mal match para medir el motor. Los
+resultados de esa medición dicen cómo se comporta el motor con estos datos, no con usuarios
+reales.
 
 ## Hacia dónde vamos
 
 - [x] Modelar la base de datos
-- [ ] Perfiles de estudiantes y publicación de proyectos
-- [ ] Motor de recomendación
-- [ ] Medición y comparación de resultados
-- [ ] Panel de métricas
+- [x] Perfiles de estudiantes y publicación de proyectos
+- [x] Motor de recomendación
+- [x] Medición y comparación de resultados
+- [x] Panel de métricas
+- [x] Notificaciones en la plataforma y por email
 - [ ] Deploy y presentación
 
 ## Quiénes lo hacemos

@@ -9,6 +9,9 @@ build/
 .next/
 out/
 
+# Base de datos local del backend (PGlite)
+backend/.data/
+
 # Variables de entorno
 .env
 .env.local

@@ -770,16 +770,13 @@ INSERT INTO notificacion (id_usuario, tipo, mensaje, url_referencia, fecha, leid
 SELECT u.id_usuario, v.tipo::tipo_notificacion, v.mensaje, v.url, v.fecha::timestamptz, v.leida, v.email
 FROM (VALUES
     ('ignacio.luna@alumnos.utnmatch.test', 'invitacion',
-     'Andes Software SRL te invitó al proyecto "Panel de monitoreo de servidores".', '/invitaciones',
+     'Andes Software SRL te invitó al proyecto «Panel de monitoreo de servidores».', '/invitaciones',
      '2026-08-20 15:00-03', false, true),
     ('franco.dominguez@alumnos.utnmatch.test', 'cambio_estado_postulacion',
-     'Tu postulación a "Panel de monitoreo de servidores" pasó a entrevista.', '/postulaciones',
+     'Tu postulación a «Panel de monitoreo de servidores» pasó a «entrevista».', '/postulaciones',
      '2026-08-19 21:00-03', true, true),
-    ('ignacio.luna@alumnos.utnmatch.test', 'mensaje_nuevo',
-     'Tenés un mensaje nuevo de Martín Paz.', '/mensajes',
-     '2026-08-20 15:05-03', false, false),
     ('martin.paz@andessoftware.test', 'nueva_postulacion',
-     'Carolina Vega se postuló a "Panel de monitoreo de servidores".', '/proyectos',
+     'Carolina Vega se postuló a «Panel de monitoreo de servidores».', '/mis-proyectos/1',
      '2026-08-15 09:40-03', true, true)
 ) AS v(usuario, tipo, mensaje, url, fecha, leida, email)
 JOIN usuario u ON u.email = v.usuario;
