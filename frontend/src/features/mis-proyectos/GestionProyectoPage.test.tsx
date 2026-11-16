@@ -51,7 +51,30 @@ describe("GestionProyectoPage", () => {
       "Pasar a en revisión",
       "Pasar a entrevista",
       "Pasar a rechazada",
+      "Ver el historial",
     ]);
+  });
+
+  it("el publicador puede ver el historial de cada postulación, que se pide recién al abrirlo", async () => {
+    const { persona } = montar();
+    const obtener = vi.spyOn(api.postulaciones, "obtener").mockResolvedValue(
+      postulacionDe({
+        historial: [
+          { estadoAnterior: null, estadoNuevo: "pendiente", fechaCambio: "2026-09-05T10:00:00Z" },
+          { estadoAnterior: "pendiente", estadoNuevo: "en_revision", fechaCambio: "2026-09-07T15:30:00Z" },
+        ],
+      }),
+    );
+    const tarjeta = within((await screen.findByRole("heading", { name: "Lucía Fernández" })).closest("article") as HTMLElement);
+    expect(obtener).not.toHaveBeenCalled();
+
+    await persona.click(tarjeta.getByRole("button", { name: "Ver el historial" }));
+
+    const historial = within(await tarjeta.findByRole("list", { name: "Historial de cambios" }));
+    expect(obtener).toHaveBeenCalledWith(11, expect.anything());
+    expect(historial.getAllByRole("listitem")[0]).toHaveTextContent("Postulación enviada (Pendiente)");
+    expect(historial.getAllByRole("listitem")[1]).toHaveTextContent("Pendiente → En revisión");
+    expect(tarjeta.getByRole("button", { name: "Ocultar el historial" })).toHaveAttribute("aria-expanded", "true");
   });
 
   it("cambia el estado de una postulación después de confirmar y recarga la lista", async () => {

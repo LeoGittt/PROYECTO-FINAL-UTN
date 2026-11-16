@@ -1,6 +1,6 @@
 "use client";
 
-import { Mail, Sparkles, UserPlus, Users } from "lucide-react";
+import { History, Mail, Sparkles, UserPlus, Users } from "lucide-react";
 import { useState } from "react";
 import { AsyncView } from "@/components/ui/AsyncView";
 import { Badge } from "@/components/ui/Badge";
@@ -13,6 +13,7 @@ import { ScoreRing } from "@/components/ui/ScoreRing";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
 import { transicionesPermitidas } from "@/features/postulaciones/estados";
+import { Historial } from "@/features/postulaciones/Historial";
 import { EstadoInvitacionBadge, EstadoPostulacionBadge } from "@/features/proyectos/comunes";
 import { api } from "@/lib/api/endpoints";
 import type { EstadoPostulacion, Postulacion, ProyectoDto, RecomendacionEstudiante } from "@/lib/api/types";
@@ -32,6 +33,8 @@ const tecnologiasEnTexto = (tecnologias: { nombre: string; nivel: keyof typeof N
 export function Postulantes({ proyecto }: { proyecto: ProyectoDto }) {
   const toast = useToast();
   const [cambio, setCambio] = useState<{ postulacion: Postulacion; estado: EstadoPostulacion } | null>(null);
+  // Una postulación con el historial abierto a la vez.
+  const [conHistorial, setConHistorial] = useState<number | null>(null);
   const consulta = useApiQuery(
     `proyectos:${proyecto.idProyecto}:postulaciones`,
     (signal) => api.postulaciones.delProyecto(proyecto.idProyecto, undefined, { signal }),
@@ -107,7 +110,18 @@ export function Postulantes({ proyecto }: { proyecto: ProyectoDto }) {
                         Pasar a {ESTADO_POSTULACION_ETIQUETA[estado].toLowerCase()}
                       </Button>
                     ))}
+                    <Button
+                      tamano="sm"
+                      variante="ghost"
+                      aria-expanded={conHistorial === p.idPostulacion}
+                      iconoIzquierda={<History aria-hidden="true" className="size-4" />}
+                      onClick={() => setConHistorial(conHistorial === p.idPostulacion ? null : p.idPostulacion)}
+                    >
+                      {conHistorial === p.idPostulacion ? "Ocultar el historial" : "Ver el historial"}
+                    </Button>
                   </div>
+                  {/* key: al cambiar el estado se vuelve a pedir el historial. */}
+                  {conHistorial === p.idPostulacion && <Historial key={p.estado} idPostulacion={p.idPostulacion} />}
                 </Card>
               </li>
             ))}

@@ -11,17 +11,17 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ScoreRing } from "@/components/ui/ScoreRing";
-import { RegionCargando, SkeletonTexto } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { esApiError } from "@/lib/api/client";
 import { api } from "@/lib/api/endpoints";
 import type { EstadoPostulacion, Postulacion } from "@/lib/api/types";
 import { cn } from "@/lib/cn";
-import { formatearFecha, formatearFechaHora } from "@/lib/format";
+import { formatearFecha } from "@/lib/format";
 import { ESTADO_POSTULACION_ETIQUETA } from "@/lib/labels";
 import { useApiQuery } from "@/lib/hooks/useApiQuery";
 import { EstadoPostulacionBadge } from "@/features/proyectos/comunes";
 import { pasosDeLinea, transicionesPermitidas } from "./estados";
+import { Historial } from "./Historial";
 
 type FiltroEstado = "todas" | EstadoPostulacion;
 
@@ -51,39 +51,6 @@ function LineaDeTiempo({ estado }: { estado: EstadoPostulacion }) {
         </li>
       ))}
     </ol>
-  );
-}
-
-/** Historial con fechas: se pide recién cuando la persona lo abre (el listado no lo trae). */
-function Historial({ idPostulacion }: { idPostulacion: number }) {
-  const consulta = useApiQuery(`postulaciones:${idPostulacion}`, (signal) => api.postulaciones.obtener(idPostulacion, { signal }));
-  return (
-    <AsyncView
-      consulta={consulta}
-      cargando={
-        <RegionCargando etiqueta="Cargando el historial">
-          <SkeletonTexto lineas={2} />
-        </RegionCargando>
-      }
-      tituloError="No pudimos cargar el historial"
-    >
-      {(detalle) =>
-        detalle.historial && detalle.historial.length > 0 ? (
-          <ul aria-label="Historial de cambios" className="flex flex-col gap-1.5 text-sm">
-            {detalle.historial.map((cambio) => (
-              <li key={cambio.fechaCambio + cambio.estadoNuevo}>
-                {cambio.estadoAnterior
-                  ? `${ESTADO_POSTULACION_ETIQUETA[cambio.estadoAnterior]} → ${ESTADO_POSTULACION_ETIQUETA[cambio.estadoNuevo]}`
-                  : `Postulación enviada (${ESTADO_POSTULACION_ETIQUETA[cambio.estadoNuevo]})`}
-                <span className="text-muted"> · {formatearFechaHora(cambio.fechaCambio)}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-muted">Todavía no hay cambios de estado.</p>
-        )
-      }
-    </AsyncView>
   );
 }
 
