@@ -182,3 +182,36 @@ export class ProyectoPublicadoListener {
 ```
 
 `MatchingModule` registra el listener y asocia `PUBLICADOR_EVENTOS` a la implementación de infraestructura, que publica con `@nestjs/event-emitter`. Para los eventos hay que agregar `@nestjs/event-emitter`, que se incorpora al empezar el desarrollo de M3.
+
+## 7. Cómo quedó en la implementación
+
+Durante la implementación simplificamos la organización interna de los módulos, para que el código fuera sencillo y cualquiera del equipo pudiera explicarlo. Las reglas de las secciones 2 a 5 se mantienen: cada módulo usa solo sus tablas, se comunica con los demás por el servicio que exporta o por eventos, y la única lectura entre módulos son las vistas del dashboard. Lo que cambió es cuántas carpetas e interfaces se usan para cumplirlas.
+
+Carpetas. M1 (`perfiles`) y el submódulo de catálogos tienen las cuatro carpetas por capa, porque se hicieron primero con esa estructura. Los otros módulos tienen pocos archivos y quedaron planos: un controlador, un servicio, un repositorio con SQL directo, los esquemas de validación y, cuando la lógica lo justifica, un archivo de funciones puras.
+
+```
+backend/src/
+  compartido/        dominio/ (errores, eventos, PublicadorEventos) e infraestructura/ (base, configuración, eventos, HTTP, seguridad)
+  perfiles/          M1: presentacion/, aplicacion/, dominio/, infraestructura/
+  proyectos/         M2: controlador, servicio, repositorio y esquemas
+  matching/          M3: lo mismo, más motor.ts, evaluacion.ts y estado-postulacion.ts
+  comunicacion/      M4: notificaciones y envío de emails
+  administracion/    M5: catalogos/ (por capas), y administración y reportes juntos
+```
+
+Dominio. Sigue siendo TypeScript puro y se prueba sin base de datos: `matching/motor.ts` (`calcularPuntaje` y las similitudes), `matching/evaluacion.ts` (precisión, recall y precisión en el top-k), `matching/estado-postulacion.ts` (la máquina de estados) y `compartido/dominio/eventos.ts`.
+
+Interfaces. No definimos una interfaz por repositorio: con una sola implementación agregaba un archivo por tabla y no cambiaba nada en la práctica. Los servicios reciben la clase del repositorio. Se mantuvo `PublicadorEventos`, así que los servicios publican sin conocer la librería de eventos. Los métodos que reciben eventos (`@OnEvent`) quedaron en los servicios que reaccionan: `MatchingService` recalcula ante `perfil.actualizado`, `proyecto.publicado`, `proyecto.actualizado` y `proyecto.estado_cambiado`, y `NotificacionesService` crea los avisos.
+
+Contratos. Las interfaces de la sección 4 eran una propuesta. Los métodos que exporta cada servicio quedaron en el código, y los endpoints, en `docs/api/CONTRATO.md`. La mensajería interna de M4 no se implementó porque es deseable.
+
+| Módulo NestJS | Módulo | imports | exports |
+|---------------|--------|---------|---------|
+| `PerfilesModule` | M1 | `DatabaseModule`, `CatalogosModule` | `PerfilesService` y el validador de sesión |
+| `ProyectosModule` | M2 | `DatabaseModule`, `CatalogosModule`, `PerfilesModule` | `ProyectosService` |
+| `MatchingModule` | M3 | `DatabaseModule`, `PerfilesModule`, `ProyectosModule` | `MatchingService`, `PostulacionesService`, `EvaluacionService` |
+| `ComunicacionModule` | M4 | `DatabaseModule`, `PerfilesModule`, `MatchingModule` | |
+| `CatalogosModule` | M5 | `DatabaseModule` | `CatalogosService` |
+| `AdministracionModule` | M5 | `DatabaseModule`, `PerfilesModule`, `ProyectosModule`, `MatchingModule` | |
+
+Las dependencias siguen sin ciclos, igual que en la tabla de la sección 5.1.

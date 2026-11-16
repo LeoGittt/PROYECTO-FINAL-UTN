@@ -41,3 +41,15 @@ Una revisión como la de un tutor exigente, con los flujos probados sobre la bas
 ## 8. Conclusiones
 
 Pedir un plan antes que un resultado nos permitió detectar la incoherencia con la Entrega 1 antes de escribir código. La IA fue útil para encontrar inconsistencias, pero varias veces afirmó datos sin verificarlos (la aprobación del tutor, un conteo del seed y quién había marcado el conjunto de referencia), así que todo lo que se puede comprobar hay que comprobarlo. También aprendimos que un dato puede no aparecer en ninguna consulta y aun así ser necesario para validar. Quedan de nuestro lado las decisiones de alcance, la revisión del conjunto de referencia, la verificación de las materias del seed contra el plan vigente y la prueba del esquema en Supabase.
+
+## 9. Implementación del MVP
+
+Después de la Entrega 2 usamos el mismo asistente para implementar el MVP. Le pedimos tres cosas: que cumpliera todo lo marcado como MVP en `MODULOS.md`, que lo probara todo y que el código fuera sencillo, sin estructuras que no hicieran falta. Esa última condición cambió la organización interna de los módulos respecto de esta entrega; las diferencias están en la sección 7 de `ARQUITECTURA.md`.
+
+El trabajo se dividió en siete tareas (base del backend, perfiles, proyectos y motor, pantallas del estudiante y del publicador, notificaciones y administración, pantallas de administración, e integración). Como regla general, primero se escribía una prueba que fallaba y después el código que la hacía pasar. Al terminar algunas tareas, otra instancia de la IA, sin ver cómo se había hecho, revisó el resultado contra lo pedido. En la tarea de administración rechazó la entrega por dos errores: al reactivar a un estudiante no se recalculaban sus compatibilidades, y un administrador podía cambiarle el rol a otro. Los dos se corrigieron con una prueba que reproduce el caso.
+
+La última tarea fue recorrer la aplicación en un navegador con la API real, con los cuatro roles. Aparecieron dos errores que las pruebas no detectaban: al cerrar sesión, el siguiente usuario que entraba terminaba en la pantalla del anterior, y la tabla de evolución mensual del dashboard salteaba los meses sin proyectos. También se corrigieron con una prueba.
+
+Con los datos de ejemplo, la evaluación del motor implementado da, para k = 5: v1 con precisión 94 %, recall 100 % y precisión en el top-5 96 %; v2 con precisión 100 %, recall 65 % y precisión en el top-5 100 %. En la iteración 6 habíamos estimado una precisión de 0,93 para v1 con el cálculo hecho sobre la base.
+
+Lo que aprendimos en esta etapa es que las pruebas automáticas no reemplazan usar el sistema: los dos últimos errores solo aparecieron al recorrerlo como lo haría un usuario. Quedan de nuestro lado la revisión del código, la revisión visual de las pantallas, la prueba con lectores de pantalla y el despliegue.
