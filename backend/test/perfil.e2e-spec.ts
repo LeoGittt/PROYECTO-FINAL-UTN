@@ -645,10 +645,17 @@ describe('GET /api/estudiantes/:idEstudiante (e2e)', () => {
 
   beforeAll(async () => {
     t = await crearAppDePrueba();
-    const token = await iniciarSesion(t.http(), USUARIOS_SEMILLA.estudiante);
-    const yo = await t.http().get('/api/auth/yo').set(conSesion(token)).expect(200);
-    idEstudiante = yo.body.perfil.idEstudiante;
-    emailEstudiante = yo.body.usuario.email;
+    // Una estudiante nueva, sin postulaciones ni invitaciones: ningún publicador tiene relación con ella.
+    const { token, email } = await registrarUsuario(t.http(), 'estudiante');
+    const [carrera] = (await t.http().get('/api/catalogos/carreras')).body as Carrera[];
+    const perfil = await t
+      .http()
+      .put('/api/perfil')
+      .set(conSesion(token))
+      .send({ idCarrera: carrera.idCarrera, anioCursada: 1, horasSemanales: 10 })
+      .expect(200);
+    idEstudiante = perfil.body.idEstudiante;
+    emailEstudiante = email;
   });
   afterAll(async () => {
     await t.cerrar();

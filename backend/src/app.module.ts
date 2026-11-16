@@ -4,7 +4,9 @@ import { CatalogosModule } from './administracion/catalogos/catalogos.module.js'
 import { CompartidoModule } from './compartido/compartido.module.js';
 import type { Configuracion } from './compartido/infraestructura/configuracion/configuracion.js';
 import { GuardAcceso } from './compartido/infraestructura/seguridad/guard-acceso.js';
+import { MatchingModule } from './matching/matching.module.js';
 import { PerfilesModule } from './perfiles/perfiles.module.js';
+import { ProyectosModule } from './proyectos/proyectos.module.js';
 
 /**
  * Raíz de la aplicación. Los módulos de negocio se suman acá a medida que existen; cada uno
@@ -19,6 +21,8 @@ export class AppModule {
         CompartidoModule.registrar(configuracion),
         CatalogosModule,
         PerfilesModule,
+        ProyectosModule,
+        MatchingModule,
       ],
       providers: [
         // Un único guard global: toda ruta exige sesión salvo las marcadas con `@Public()`.

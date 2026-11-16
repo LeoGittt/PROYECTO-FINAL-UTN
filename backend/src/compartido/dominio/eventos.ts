@@ -36,3 +36,59 @@ export interface PublicadorEventos {
 }
 
 export const PUBLICADOR_EVENTOS = Symbol('PUBLICADOR_EVENTOS');
+
+
+// ---------------------------------------------------------------------------
+// M2 (proyectos) y M3 (postulaciones e invitaciones). Los nombres son los del contrato
+// (docs/api/CONTRATO.md, sección 6). `EventosDominio` se completa acá por fusión de interfaces.
+// ---------------------------------------------------------------------------
+
+export interface EventosDominio {
+  /** M2: un proyecto pasó de `borrador` a `publicado`. M3 calcula sus puntajes. */
+  'proyecto.publicado': { idProyecto: number; titulo: string };
+  /** M2: se editó un proyecto. M3 recalcula sus puntajes. */
+  'proyecto.actualizado': { idProyecto: number };
+  /**
+   * M2 y M5: cambió el estado de un proyecto por otra vía que la publicación (en curso,
+   * finalizado, cancelado, suspendido o reactivado). M3 deja de recomendar los que ya no están
+   * publicados y M4 avisa a los estudiantes con postulación activa.
+   */
+  'proyecto.estado_cambiado': {
+    idProyecto: number;
+    titulo: string;
+    estadoAnterior: string;
+    estadoNuevo: string;
+  };
+  /** M3: un estudiante se postuló, o aceptó una invitación (que crea la postulación). */
+  'postulacion.creada': {
+    idPostulacion: number;
+    idProyecto: number;
+    tituloProyecto: string;
+    idUsuarioPublicador: number;
+    idUsuarioEstudiante: number;
+  };
+  /** M3: cambió el estado de una postulación. */
+  'postulacion.estado_cambiado': {
+    idPostulacion: number;
+    idProyecto: number;
+    tituloProyecto: string;
+    idUsuarioEstudiante: number;
+    estadoAnterior: string;
+    estadoNuevo: string;
+  };
+  /** M3: un publicador invitó a un estudiante a su proyecto. */
+  'invitacion.enviada': {
+    idInvitacion: number;
+    idProyecto: number;
+    tituloProyecto: string;
+    idUsuarioEstudiante: number;
+  };
+  /** M3: un estudiante pasó a tener un proyecto recomendado que antes no alcanzaba el umbral. */
+  'match.nuevo': {
+    idEstudiante: number;
+    idUsuarioEstudiante: number;
+    idProyecto: number;
+    tituloProyecto: string;
+    puntajeTotal: number;
+  };
+}

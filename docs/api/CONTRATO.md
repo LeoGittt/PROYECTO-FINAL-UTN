@@ -74,16 +74,16 @@ En el `PUT`, `tecnologias` es `[{ idTecnologia, nivel }]` (`nivel`: `basico`, `i
 }
 ```
 
-`cantidadPostulaciones` solo se informa al publicador dueño y al admin. `compatibilidad` solo aparece cuando quien consulta es un estudiante con perfil completo.
+`cantidadPostulaciones` solo se informa al publicador dueño y al admin. `compatibilidad` solo aparece cuando quien consulta es un estudiante con perfil completo y el motor ya calculó ese par (ver 5.2).
 
 | Método y ruta | Quién | Descripción |
 |---|---|---|
-| `POST /proyectos` | publicador con perfil | Cuerpo: `{ titulo, descripcion, objetivos?, perfilBuscado?, duracionSemanas, horasSemanales, anioMinimo, cupos, modalidad, tipoRetribucion, detalleRetribucion?, tecnologias: [{ idTecnologia, obligatoria }], habilidades?: [idHabilidad], publicar?: boolean }`. 201 con el proyecto en `borrador`, o en `publicado` si `publicar` es `true` |
-| `GET /proyectos/mios?estado=` | publicador | Sus proyectos, con `cantidadPostulaciones` |
+| `POST /proyectos` | publicador con perfil | Cuerpo: `{ titulo, descripcion, objetivos?, perfilBuscado?, duracionSemanas, horasSemanales, anioMinimo, cupos, modalidad, tipoRetribucion, detalleRetribucion?, tecnologias: [{ idTecnologia, obligatoria }], habilidades?: [idHabilidad], publicar?: boolean }`. 201 con el proyecto en `borrador`, o en `publicado` si `publicar` es `true`. 422 si el publicador no completó su perfil o si alguna tecnología o habilidad no existe |
+| `GET /proyectos/mios?estado=` | publicador | Sus proyectos, los más nuevos primero, con `cantidadPostulaciones`. 422 si todavía no completó su perfil |
 | `GET /proyectos/:id` | autenticado | Un proyecto publicado lo ve cualquiera. Un borrador o suspendido solo su dueño y el admin (404 para el resto) |
-| `PUT /proyectos/:id` | dueño | Edita los mismos campos que el alta (reemplaza tecnologías y habilidades). No se edita si el estado es `finalizado`, `cancelado` o `suspendido` (409) |
-| `POST /proyectos/:id/publicar` | dueño | `borrador` → `publicado` |
-| `PATCH /proyectos/:id/estado` | dueño | `{ estado }`. Transiciones válidas: `borrador` → `cancelado`; `publicado` → `en_curso` o `cancelado`; `en_curso` → `finalizado` o `cancelado`. Cualquier otra da 409. `finalizado` y `cancelado` fijan `fechaCierre` |
+| `PUT /proyectos/:id` | dueño | Edita los mismos campos que el alta (reemplaza tecnologías y habilidades). No se edita si el estado es `finalizado`, `cancelado` o `suspendido` (409). Otro publicador recibe 403 |
+| `POST /proyectos/:id/publicar` | dueño | `borrador` → `publicado`. 200 con el proyecto; 409 si no estaba en borrador |
+| `PATCH /proyectos/:id/estado` | dueño | `{ estado }`. Transiciones válidas: `borrador` → `cancelado`; `publicado` → `en_curso` o `cancelado`; `en_curso` → `finalizado` o `cancelado`. Cualquier otra da 409. `finalizado` y `cancelado` fijan `fechaCierre`. 200 con el proyecto |
 | `POST /proyectos/:id/duplicar` | dueño | (deseable) crea un borrador copia |
 | `GET /proyectos` | autenticado | Búsqueda de proyectos `publicado`. Filtros: `q` (título y descripción), `tecnologias=1,2` (al menos una), `modalidad`, `tipoRetribucion`, `horasMax`, `anioMax` (año mínimo del proyecto menor o igual). Paginada |
 
@@ -93,8 +93,8 @@ En el `PUT`, `tecnologias` es `[{ idTecnologia, nivel }]` (`nivel`: `basico`, `i
 
 | Método y ruta | Quién | Respuesta |
 |---|---|---|
-| `GET /matching/recomendaciones?limite=10` | estudiante con perfil | `RecomendacionProyecto[]`, ordenadas por puntaje descendente y con puntaje mayor o igual al umbral de la configuración activa |
-| `GET /matching/proyectos/:idProyecto/recomendados?limite=10` | dueño | `RecomendacionEstudiante[]` |
+| `GET /matching/recomendaciones?limite=10` | estudiante con perfil | `RecomendacionProyecto[]` de proyectos `publicado`, ordenadas por puntaje descendente y con puntaje mayor o igual al umbral de la configuración activa. `limite` va de 1 a 50. 422 si el estudiante no completó su perfil |
+| `GET /matching/proyectos/:idProyecto/recomendados?limite=10` | dueño | `RecomendacionEstudiante[]` de estudiantes activos, con el mismo orden y umbral. Otro publicador recibe 403 |
 
 ```json
 // RecomendacionProyecto
@@ -115,6 +115,8 @@ En el `PUT`, `tecnologias` es `[{ idTecnologia, nivel }]` (`nivel`: `basico`, `i
 ### 5.2 Motor v1 (fórmula)
 
 `puntajeTotal = pesoTecnologias × sT + pesoTexto × sX + pesoContexto × sC`, con los pesos de la configuración activa (`sX` vale 0 si el peso de texto es 0).
+
+El backend guarda en `match` el puntaje de cada estudiante activo con cada proyecto que no es borrador (así una postulación conserva su puntaje aunque el proyecto pase a `en_curso`), pero solo recomienda proyectos `publicado`. Los puntajes se calculan al arrancar si la tabla está vacía y se recalculan solos, limitados a los pares afectados: al guardar un perfil de estudiante y al publicar, editar o reactivar un proyecto. Si al publicar o editar un proyecto un estudiante llega por primera vez al umbral, se emite `match.nuevo`.
 
 - `sT` (tecnologías) es la cobertura ponderada de lo que pide el proyecto: cada tecnología obligatoria pesa 2 y cada deseable pesa 1. Una tecnología que el estudiante sabe aporta su peso multiplicado por el factor de nivel (`basico` 0,6, `intermedio` 0,85, `avanzado` 1); una que no sabe aporta 0. `sT` es la suma de lo aportado dividida por la suma de pesos. Si el proyecto no pide tecnologías, `sT` es 1.
 - `sC` (contexto) es `0,6 × horas + 0,4 × anio`. `horas` es 1 si las horas semanales del estudiante cubren las del proyecto, y si no, es el cociente entre ambas. `anio` es 1 si el año de cursada alcanza el año mínimo, y si no, es `max(0, 1 − 0,5 × (anioMinimo − anioCursada))`.
@@ -148,17 +150,17 @@ En el `PUT`, `tecnologias` es `[{ idTecnologia, nivel }]` (`nivel`: `basico`, `i
   "historial": [{ "estadoAnterior": null, "estadoNuevo": "pendiente", "fechaCambio": "..." }] }
 ```
 
-`historial` solo viene en el detalle. `estudiante.email` solo lo ve el publicador dueño y el admin.
+`historial` solo viene en el detalle (y en las respuestas de alta y cambio de estado). `estudiante.email` solo lo ve el publicador dueño y el admin. `estudiante.tecnologias` es `[{ nombre, nivel }]`. `puntajeTotal` es el de la configuración activa, o `null` si el par no tiene puntaje.
 
 | Método y ruta | Quién | Descripción |
 |---|---|---|
-| `POST /postulaciones` | estudiante con perfil | `{ idProyecto, mensajePresentacion? }`. Solo a proyectos `publicado`. 409 si ya se postuló |
-| `GET /postulaciones/mias?estado=` | estudiante | Sus postulaciones |
+| `POST /postulaciones` | estudiante con perfil | `{ idProyecto, mensajePresentacion? }`. 201 con la postulación. Solo a proyectos `publicado` (422 si no lo está; 404 si es un borrador o un suspendido). 409 si ya se postuló, o si tiene una invitación pendiente a ese proyecto (se responde la invitación). 422 si no completó su perfil |
+| `GET /postulaciones/mias?estado=` | estudiante | Sus postulaciones, las más nuevas primero (vacío si no completó su perfil) |
 | `GET /proyectos/:idProyecto/postulaciones?estado=` | dueño o admin | Las postulaciones del proyecto, con el puntaje y el perfil resumido |
-| `GET /postulaciones/:id` | estudiante dueño, publicador dueño o admin | Detalle con el historial |
-| `PATCH /postulaciones/:id/estado` | ver abajo | `{ estado }` |
+| `GET /postulaciones/:id` | estudiante dueño, publicador dueño o admin | Detalle con el historial. 403 para el resto |
+| `PATCH /postulaciones/:id/estado` | ver abajo | `{ estado }`. 200 con la postulación (con el historial) |
 
-Máquina de estados: `pendiente` → `en_revision`, `entrevista`, `rechazada` o `retirada`; `en_revision` → `entrevista`, `aceptada`, `rechazada` o `retirada`; `entrevista` → `aceptada`, `rechazada` o `retirada`. `aceptada`, `rechazada` y `retirada` son finales. Solo el estudiante dueño puede pasar a `retirada`, y solo el publicador del proyecto puede pasar a los demás estados. Una transición inválida da 409. El backend fija `utn_match.id_usuario` con `SET LOCAL` en la misma transacción para que el trigger del historial registre al responsable.
+Máquina de estados: `pendiente` → `en_revision`, `entrevista`, `rechazada` o `retirada`; `en_revision` → `entrevista`, `aceptada`, `rechazada` o `retirada`; `entrevista` → `aceptada`, `rechazada` o `retirada`. `aceptada`, `rechazada` y `retirada` son finales. Solo el estudiante dueño puede pasar a `retirada`, y solo el publicador del proyecto puede pasar a los demás estados (403 en los demás casos, también para el admin). Una transición inválida da 409, y también un cambio simultáneo: el estado se actualiza solo si sigue siendo el que se leyó. El backend fija `utn_match.id_usuario` con `SET LOCAL` en la misma transacción para que el trigger del historial registre al responsable.
 
 ### 5.5 Invitaciones
 
@@ -166,10 +168,10 @@ Máquina de estados: `pendiente` → `en_revision`, `entrevista`, `rechazada` o 
 
 | Método y ruta | Quién | Descripción |
 |---|---|---|
-| `POST /invitaciones` | dueño del proyecto | `{ idProyecto, idEstudiante, mensaje? }`. Solo a proyectos `publicado`. 409 si el estudiante ya tiene postulación o invitación en ese proyecto |
-| `GET /invitaciones/mias` | estudiante | Sus invitaciones |
+| `POST /invitaciones` | dueño del proyecto | `{ idProyecto, idEstudiante, mensaje? }`. 201 con la invitación. Solo a proyectos `publicado` (422). 404 si el estudiante no existe o está desactivado. 409 si el estudiante ya tiene postulación o invitación en ese proyecto |
+| `GET /invitaciones/mias` | estudiante | Sus invitaciones, las más nuevas primero (vacío si no completó su perfil) |
 | `GET /proyectos/:idProyecto/invitaciones` | dueño | Las invitaciones del proyecto |
-| `POST /invitaciones/:id/responder` | estudiante invitado | `{ aceptar: boolean }`. Si acepta, en la misma transacción se crea la postulación en estado `pendiente`. Devuelve `{ invitacion, postulacion }` (`postulacion` es `null` si rechazó) |
+| `POST /invitaciones/:id/responder` | estudiante invitado | `{ aceptar: boolean }`. Si acepta, en la misma transacción se crea la postulación en estado `pendiente`. Devuelve 200 con `{ invitacion, postulacion }` (`postulacion` es `null` si rechazó). 409 si ya fue respondida, 403 si quien responde no es el invitado, 422 si acepta y el proyecto ya no está `publicado` |
 
 ## 6. Comunicación (M4)
 
